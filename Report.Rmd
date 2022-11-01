@@ -1,0 +1,47 @@
+---
+title: 'Case Study: Turbulence'
+author: "Julia Rosner, Emily Mittleman, Tracy _, Ashley _"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+date: "2022-11-3"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(broom)
+library(stringr)
+library(knitr)
+library(nnet)
+library(ggplot2)
+library(MASS)
+library(ISLR)
+library(leaps)
+library(glmnet)
+library(mgcv)
+library(car)
+```
+
+## Introduction
+
+Goals: 
+(1) Prediction: For a new parameter setting of (Re, F r, St), predict its particle cluster volume distribution in terms of its four raw moments.
+
+(2) Inference: Investigate and interpret how each parameter affects the probability distribution for particle cluster volumes.
+
+## Methodology
+
+
+
+## Results
+
+
+
+## Conclusion
+
+
+
+
