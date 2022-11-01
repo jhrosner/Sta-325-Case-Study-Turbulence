@@ -29,8 +29,8 @@ library(car)
 
 ## Data (dont include)
 ```{r}
-data_train <- read.csv("/Users/juliarosner/Desktop/Stat 325/Case Study/Data/data-train.csv")
-data_test <- read.csv("/Users/juliarosner/Desktop/Stat 325/Case Study/Data/data-test.csv")
+data_train <- read.csv("data-train.csv")
+data_test <- read.csv("data-test.csv")
 data_train
 ```
 
