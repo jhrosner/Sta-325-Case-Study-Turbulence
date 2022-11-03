@@ -22,6 +22,8 @@ library(leaps)
 library(glmnet)
 library(mgcv)
 library(car)
+library(splines)
+library(ggpubr)
 ```
 
 ## Introduction
@@ -70,6 +72,8 @@ hist(log(data_train$R_moment_4), breaks=20)
 Performing a log transformation on these variables created more normally distributed variables. While not perfectly normal, this is a big improvement to the non-transformed variables. We will use the log version of variables and will reflect these transformed variables as such in our interpretations and analysis. 
 
 Another transformation to consider is to turn Fr and Re into ordered, categorical variables, since they each only have 2 or 3 unique values.
+
+(TODO: Figure out how to handle infinite for Fr)
 
 ```{r}
 pairs(data_train)
@@ -120,8 +124,6 @@ train_ind <- sample(x = nrow(data_train), size = 0.8 * nrow(data_train))
 test_ind_neg <- -train_ind
 training <- data_train[train_ind, ]
 testing <- data_train[test_ind_neg, ]
-training
-testing
 ```
 
 # Linear model using least squares & no interaction term 
@@ -354,10 +356,6 @@ The linear regression fit seems to have the minimal MSE for the fourth order.
 
 
 ### Splines
-```{r}
-library(splines)
-```
-
 
 First moment:
 ```{r}
@@ -476,7 +474,240 @@ mse_spline4m4
 mse_spline5m4
 ```
 
-## Methodology (to include in writeup)
 
+## Model for Predicting New Inputs
+
+```{r}
+p1 = ggplot(data_train, aes(x=St, y=log(R_moment_4), color = factor(Re))) +
+  geom_point() +
+  labs(title = "log(Moment 4) versus St, Color-Coded by Re")
+p2 = ggplot(filter(data_train, Fr==0.052), aes(x=St, y=log(R_moment_4), color = factor(Re))) +
+  geom_point() +
+  labs(title = "log(Moment 4) versus St, Color-Coded by Re", subtitle = "Filtered by observations where Fr == 0.052")
+p3 = ggplot(filter(data_train, Fr==0.3), aes(x=St, y=log(R_moment_4), color = factor(Re))) +
+  geom_point() +
+  labs(title = "log(Moment 4) versus St, Color-Coded by Re", subtitle = "Filtered by observations where Fr == 0.3")
+p4 = ggplot(filter(data_train, Fr==Inf), aes(x=St, y=log(R_moment_4), color = factor(Re))) +
+  geom_point() +
+  labs(title = "log(Moment 4) versus St, Color-Coded by Re", subtitle = "Filtered by observations where Fr == Inf")
+eda.plots = ggarrange(p1, p2, p3, p4, ncol=2, nrow=2)
+eda.plots
+```
+
+
+```{r, results='asis'}
+# perform transformation on Fr to get rid of infinity
+g <- function(x) {
+  return (1 - 2^(-x))
+}
+
+printModels <- function(models) {
+  for (i in 1:length(models)) {
+    print(paste0("R Moment ", i))
+    print(knitr::kable(tidy(models[[i]]),
+                       digits=3))
+    stats = matrix(c(summary(models[[i]])$adj.r.squared, summary(models[[i]])$sigma),
+                   ncol=2)
+    colnames(stats) = c("Adj R^2", "Std Err")
+    print(knitr::kable(stats, digits=3))
+    cat('\n\n<!-- -->\n\n')
+  }
+}
+```
+
+
+```{r}
+moments = list(data_train$R_moment_1, data_train$R_moment_2, data_train$R_moment_3, data_train$R_moment_4)
+```
+
+Try base linear model:
+
+```{r, results='asis'}
+lm.models = vector("list",4)
+for (i in 1:4) {
+  model = lm(log(moments[[i]]) ~ St + Re + g(Fr), data=data_train)
+  lm.models[[i]] = model
+}
+printModels(lm.models)
+```
+
+St doesn't even seem to be a significant predictor in some of these models. Linear regression might not work super well here. 
+
+Including all interaction terms:
+
+```{r, results='asis'}
+glm.full.models = vector("list",4)
+for (i in 1:4) {
+  model = lm(log(moments[[i]]) ~ (St + Re + g(Fr))^2, data=data_train)
+  glm.full.models[[i]] = model
+}
+printModels(glm.full.models)
+```
+
+Re and g(Fr) appear to be significant, but St doesn't have any significant interactions.
+
+
+A model with the interaction term for Re and Fr:
+
+```{r, results='asis'}
+glm.interaction.models = vector("list",4)
+for (i in 1:4) {
+  model = lm(log(moments[[i]]) ~ St + Re*g(Fr), data=data_train)
+  glm.interaction.models[[i]] = model
+}
+printModels(glm.interaction.models)
+```
+
+None of these models are performing well at all, let's try other methods.
+
+# Linear model using least squares & no interaction term 
+
+```{r}
+model1 <- lm(log(R_moment_1) ~ St + Re + g(Fr), data=training)
+pred.lm1 <- predict(model1, testing)
+mse_test1 <- mean((pred.lm1 - log(testing$R_moment_1))^2)
+model2 <- lm(log(R_moment_2) ~ St + Re + g(Fr), data=training)
+pred.lm2 <- predict(model2, testing)
+mse_test2 <- mean((pred.lm2 - log(testing$R_moment_2))^2)
+model3 <- lm(log(R_moment_3) ~ St + Re + g(Fr), data=training)
+pred.lm3 <- predict(model3, testing)
+mse_test3 <- mean((pred.lm3 - log(testing$R_moment_3))^2)
+model4 <- lm(log(R_moment_4) ~ St + Re + g(Fr), data=training)
+pred.lm4 <- predict(model4, testing)
+mse_test4 <- mean((pred.lm4 - log(testing$R_moment_4))^2)
+mse_test = matrix(c(mse_test1, mse_test2, mse_test3, mse_test4), ncol=4)
+colnames(mse_test) = c("MSE 1", "MSE 2", "MSE 3", "MSE 4")
+kable(mse_test, digits=3)
+```
+
+# Linear model using least squares & interaction term
+
+```{r}
+model1 <- lm(log(R_moment_1) ~ St + Re*g(Fr), data=training)
+pred.lm1 <- predict(model1, testing)
+mse_test1 <- mean((pred.lm1 - log(testing$R_moment_1))^2)
+model2 <- lm(log(R_moment_2) ~ St + Re*g(Fr), data=training)
+pred.lm2 <- predict(model2, testing)
+mse_test2 <- mean((pred.lm2 - log(testing$R_moment_2))^2)
+model3 <- lm(log(R_moment_3) ~ St + Re*g(Fr), data=training)
+pred.lm3 <- predict(model3, testing)
+mse_test3 <- mean((pred.lm3 - log(testing$R_moment_3))^2)
+model4 <- lm(log(R_moment_4) ~ St + Re*g(Fr), data=training)
+pred.lm4 <- predict(model4, testing)
+mse_test4 <- mean((pred.lm4 - log(testing$R_moment_4))^2)
+mse_test = matrix(c(mse_test1, mse_test2, mse_test3, mse_test4), ncol=4)
+colnames(mse_test) = c("MSE 1", "MSE 2", "MSE 3", "MSE 4")
+kable(mse_test, digits=3)
+```
+
+
+Really bad results, interaction terms aren't helping much. Let's try some other methods other than simple linear regression.
+
+
+### Splines
+
+```{r, message = FALSE, warning = FALSE}
+spline1 <- lm(log(R_moment_1) ~ bs(log(St)) + bs(Re) + bs(g(Fr)), data = training)
+pred.spline1 <- predict(spline1, testing)
+mse_spline1 <- mean((pred.spline1 - log(testing$R_moment_1))^2)
+r1=summary(spline1)$adj.r.squared
+
+spline2 <- lm(log(R_moment_2) ~ bs(log(St)) + bs(Re) + bs(g(Fr)), data = training)
+pred.spline2 <- predict(spline2, testing)
+mse_spline2 <- mean((pred.spline2 - log(testing$R_moment_2))^2)
+r2=summary(spline2)$adj.r.squared
+
+spline3 <- lm(log(R_moment_3) ~ bs(log(St)) + bs(Re) + bs(g(Fr)), data = training)
+pred.spline3 <- predict(spline3, testing)
+mse_spline3 <- mean((pred.spline3 - log(testing$R_moment_3))^2)
+r3=summary(spline3)$adj.r.squared
+
+spline4 <- lm(log(R_moment_4) ~ bs(log(St)) + bs(Re) + bs(g(Fr)), data = training)
+pred.spline4 <- predict(spline4, testing)
+mse_spline4 <- mean((pred.spline4 - log(testing$R_moment_4))^2)
+r4=summary(spline4)$adj.r.squared
+
+p1 = ggplot(testing, aes(x = St, y = log(R_moment_1), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline1), size = 1) +
+  labs(title = "Spline Predictions - Moment 1")
+p2 = ggplot(testing, aes(x = St, y = log(R_moment_2), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline2), size = 1) +
+  labs(title = "Spline Predictions - Moment 2")
+p3 = ggplot(testing, aes(x = St, y = log(R_moment_3), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline3), size = 1) +
+  labs(title = "Spline Predictions - Moment 3")
+p4 = ggplot(testing, aes(x = St, y = log(R_moment_4), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline4), size = 1) +
+  labs(title = "Spline Predictions - Moment 4")
+spline.graphs = ggarrange(p1, p2, p3, p4, ncol=2, nrow=2)
+spline.graphs
+
+mse_spline = rbind(c(mse_spline1, mse_spline2, mse_spline3, mse_spline4), c(r1, r2, r3, r4))
+colnames(mse_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
+rownames(mse_spline) = c("MSE", "Ajd R^2")
+kable(mse_spline, digits=3)
+```
+
+
+Splines definitely perform better than linear regression, but still room for improvement.
+
+### Splines with interaction between Fr and Re
+
+```{r, message = FALSE, warning = FALSE}
+spline1 <- lm(log(R_moment_1) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
+pred.spline1 <- predict(spline1, testing)
+mse_spline1 <- mean((pred.spline1 - log(testing$R_moment_1))^2)
+r1=summary(spline1)$adj.r.squared
+
+spline2 <- lm(log(R_moment_2) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
+pred.spline2 <- predict(spline2, testing)
+mse_spline2 <- mean((pred.spline2 - log(testing$R_moment_2))^2)
+r2=summary(spline2)$adj.r.squared
+
+spline3 <- lm(log(R_moment_3) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
+pred.spline3 <- predict(spline3, testing)
+mse_spline3 <- mean((pred.spline3 - log(testing$R_moment_3))^2)
+r3=summary(spline3)$adj.r.squared
+
+spline4 <- lm(log(R_moment_4) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
+pred.spline4 <- predict(spline4, testing)
+mse_spline4 <- mean((pred.spline4 - log(testing$R_moment_4))^2)
+r4=summary(spline4)$adj.r.squared
+
+p1 = ggplot(testing, aes(x = St, y = log(R_moment_1), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline1), size = 1) +
+  labs(title = "Spline Predictions - Moment 1", subtitle = "Fr + Re interaction")
+p2 = ggplot(testing, aes(x = St, y = log(R_moment_2), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline2), size = 1) +
+  labs(title = "Spline Predictions - Moment 2", subtitle = "Fr + Re interaction")
+p3 = ggplot(testing, aes(x = St, y = log(R_moment_3), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline3), size = 1) +
+  labs(title = "Spline Predictions - Moment 3", subtitle = "Fr + Re interaction")
+p4 = ggplot(testing, aes(x = St, y = log(R_moment_4), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline4), size = 1) +
+  labs(title = "Spline Predictions - Moment 4", subtitle = "Fr + Re interaction")
+interaction.spline.graphs = ggarrange(p1, p2, p3, p4, ncol=2, nrow=2)
+interaction.spline.graphs
+
+mse_spline = rbind(c(mse_spline1, mse_spline2, mse_spline3, mse_spline4), c(r1, r2, r3, r4))
+colnames(mse_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
+rownames(mse_spline) = c("MSE", "Ajd R^2")
+kable(mse_spline, digits=3)
+```
+
+
+Adding the interaction term to the splines makes the performance of this model superior to anything we've used previously (when considering numerical datapoints) based on Adj $R^2$ and MSE in test validation.
+
+
+
+## Methodology (to include in writeup)
 
 
