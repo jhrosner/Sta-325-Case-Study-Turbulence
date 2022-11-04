@@ -26,11 +26,7 @@ library(car)
 ```
 
 ## Introduction
-
-Goals: 
-(1) Prediction: For a new parameter setting of (Re, F r, St), predict its particle cluster volume distribution in terms of its four raw moments.
-
-(2) Inference: Investigate and interpret how each parameter affects the probability distribution for particle cluster volumes.
+Our goals are as follows: For a new parameter setting of (Re, F r, St), predict its particle cluster volume distribution in terms of its four raw moments. Inference: Investigate and interpret how each parameter affects the probability distribution for particle cluster volumes.
 
 ## Methodology
 
