@@ -76,6 +76,50 @@ Another transformation to consider is to turn Fr and Re into ordered, categorica
 (TODO: Figure out how to handle infinite for Fr)
 
 ```{r}
+p1 <- ggplot(data=data_train, aes(x = St, y=log(R_moment_1))) + 
+  geom_point()
+
+p2 <- ggplot(data=data_train, aes(x = St, y=log(R_moment_2))) + 
+  geom_point()
+
+p3 <- ggplot(data=data_train, aes(x = St, y=log(R_moment_3))) + 
+  geom_point()
+
+p4 <- ggplot(data=data_train, aes(x = St, y=log(R_moment_4))) + 
+  geom_point()
+
+ggarrange(p1, p2, p3, p4)
+
+p5 <- ggplot(data=data_train, aes(x = factor(Re), y=log(R_moment_1))) + 
+  geom_point()
+
+p6 <- ggplot(data=data_train, aes(x = factor(Re), y=log(R_moment_2))) + 
+  geom_point()
+
+p7 <- ggplot(data=data_train, aes(x = factor(Re), y=log(R_moment_3))) + 
+  geom_point()
+
+p8 <- ggplot(data=data_train, aes(x = factor(Re), y=log(R_moment_4))) + 
+  geom_point()
+
+ggarrange(p5, p6, p7, p8)
+
+p9 <- ggplot(data=data_train, aes(x = factor(Fr), y=log(R_moment_1))) + 
+  geom_point()
+
+p10 <- ggplot(data=data_train, aes(x = factor(Fr), y=log(R_moment_2))) + 
+  geom_point()
+
+p11 <- ggplot(data=data_train, aes(x = factor(Fr), y=log(R_moment_3))) + 
+  geom_point()
+
+p12 <- ggplot(data=data_train, aes(x = factor(Fr), y=log(R_moment_4))) + 
+  geom_point()
+
+ggarrange(p9, p10, p11, p12)
+```
+
+```{r}
 pairs(data_train)
 ```
 It appears that each R_moment variable has somewhat of a linear relationship with St. Thus, we may want to begin our search for a best model by fitting a linear model.
@@ -112,9 +156,60 @@ Re and Fr seem to have significant interaction for all moments, while St and Re 
 A model with the interaction term for Re and Fr:
 ```{r}
 glm.interaction <- lm(cbind(log(R_moment_1), log(R_moment_2), log(R_moment_3), log(R_moment_4)) ~  (St + factor(Re) + factor(Fr) + factor(Re)*factor(Fr)), data=data_train)
-summary(glm.interaction)
+# summary(glm.interaction)
+glm.interaction
+
 ```
 Adding the interaction term between Re and Fr improved the fit of the model according to the adjusted R^2 values.
+
+```{r}
+# forward.model <- regsubsets(log(R_moment_1) ~ St + factor(Re) + factor(Fr), 
+#                             data = data_train)
+# 
+# summary(forward.model)
+# names(forward.model)
+# forward.model$rss
+```
+```{r}
+
+library(boot)
+library(caret)
+#  + factor(Fr)*St + St*factor(Re)
+
+glm.interaction1 <- lm(log(R_moment_1) ~  St + factor(Re) + factor(Fr) + factor(Re)*factor(Fr), data=data_train)
+glm.interaction2 <- lm(log(R_moment_2) ~  St + factor(Re) + factor(Fr) + factor(Re)*factor(Fr), data=data_train)
+glm.interaction3 <- lm(log(R_moment_3) ~  St + factor(Re) + factor(Fr) + factor(Re)*factor(Fr), data=data_train)
+glm.interaction4 <- lm(log(R_moment_4) ~  St + factor(Re) + factor(Fr) + factor(Re)*factor(Fr), data=data_train)
+# 
+# set.seed(325)
+# 
+# # define training control which
+# # generates parameters that further
+# # control how models are created
+# train_control <- trainControl(method = "cv",
+#                               number = 10)
+# 
+# model <- train(log(R_moment_1)~., data = data_train,
+#                trControl = train_control,
+#                method = "lm")
+
+confint(glm.interaction1)
+par(mfrow = c(2, 2))
+plot(glm.interaction1)
+
+confint(glm.interaction2)
+par(mfrow = c(2, 2))
+plot(glm.interaction2)
+
+confint(glm.interaction3)
+par(mfrow = c(2, 2))
+plot(glm.interaction3)
+
+confint(glm.interaction4)
+par(mfrow = c(2, 2))
+plot(glm.interaction4)
+```
+
 
 # Split data into training and test sets
 ```{r}
@@ -169,6 +264,95 @@ mse_test4
 ```
  
 Having an interaction term significantly improved the test MSEs of the linear model.
+
+```{r}
+#Create 5 equally size folds
+set.seed(325)
+folds <- cut(seq(1,nrow(data_train)),breaks=5,labels=FALSE)
+
+test_mses_noint <- list()
+#Perform 5 fold cross validation
+for(i in 1:5){
+    testIndexes <- which(folds==i,arr.ind=TRUE)
+    testData <- data_train[testIndexes, ]
+    trainData <- data_train[-testIndexes, ]
+  
+    fit.lm1 <- lm(log(R_moment_1) ~ (St + factor(Re) + factor(Fr)), data = trainData)
+    pred.lm1 <- predict(fit.lm1, testData)
+    mse_test1 <- mean((pred.lm1 - log(testData$R_moment_1))^2)
+    fit.lm2 <- lm(log(R_moment_2) ~ (St + factor(Re) + factor(Fr)), data = trainData)
+    pred.lm2 <- predict(fit.lm2, testData)
+    mse_test2 <- mean((pred.lm2 - log(testData$R_moment_2))^2)
+    fit.lm3 <- lm(log(R_moment_3) ~ (St + factor(Re) + factor(Fr)), data = trainData)
+    pred.lm3 <- predict(fit.lm3, testData)
+    mse_test3 <- mean((pred.lm3 - log(testData$R_moment_3))^2)
+    fit.lm4 <- lm(log(R_moment_4) ~ (St + factor(Re) + factor(Fr)), data = trainData)
+    pred.lm4 <- predict(fit.lm4, testData)
+    mse_test4 <- mean((pred.lm4 - log(testData$R_moment_4))^2)
+    mses = list(mse_test1, mse_test2, mse_test3, mse_test4)
+    test_mses_noint <- append(test_mses_noint, mses)
+}
+```
+
+```{r}
+df <- as.data.frame(do.call(rbind, test_mses_noint))  
+df$moment <- as.factor(c(1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4))
+df$fold <- c(1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5)
+df
+ggplot(df, aes(x = fold, y = V1, color = moment, group = moment)) + 
+  geom_point() + 
+  geom_line()
+```
+
+```{r}
+#Create 5 equally size folds
+set.seed(325)
+folds <- cut(seq(1,nrow(data_train)),breaks=5,labels=FALSE)
+
+test_mses <- list()
+#Perform 5 fold cross validation
+for(i in 1:5){
+    testIndexes <- which(folds==i,arr.ind=TRUE)
+    testData <- data_train[testIndexes, ]
+    trainData <- data_train[-testIndexes, ]
+  
+    fit.lm1 <- lm(log(R_moment_1) ~ (St + factor(Re) + factor(Fr) + factor(Re)*factor(Fr)), data = trainData)
+    pred.lm1 <- predict(fit.lm1, testData)
+    mse_test1 <- mean((pred.lm1 - log(testData$R_moment_1))^2)
+    fit.lm2 <- lm(log(R_moment_2) ~ (St + factor(Re) + factor(Fr) + factor(Re)*factor(Fr)), data = trainData)
+    pred.lm2 <- predict(fit.lm2, testData)
+    mse_test2 <- mean((pred.lm2 - log(testData$R_moment_2))^2)
+    fit.lm3 <- lm(log(R_moment_3) ~ (St + factor(Re) + factor(Fr) + factor(Re)*factor(Fr)), data = trainData)
+    pred.lm3 <- predict(fit.lm3, testData)
+    mse_test3 <- mean((pred.lm3 - log(testData$R_moment_3))^2)
+    fit.lm4 <- lm(log(R_moment_4) ~ (St + factor(Re) + factor(Fr) + factor(Re)*factor(Fr)), data = trainData)
+    pred.lm4 <- predict(fit.lm4, testData)
+    mse_test4 <- mean((pred.lm4 - log(testData$R_moment_4))^2)
+    mses = list(mse_test1, mse_test2, mse_test3, mse_test4)
+    test_mses <- append(test_mses, mses)
+}
+```
+
+```{r}
+df <- as.data.frame(do.call(rbind, test_mses))  
+df$moment <- as.factor(c(1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4))
+df$fold <- c(1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5)
+df
+ggplot(df, aes(x = fold, y = V1, color = moment, group = moment)) + 
+  geom_point() + 
+  geom_line()
+```
+```{r}
+data_ctrl <- trainControl(method = "cv", number = 5)
+
+model_caret <- train(log(R_moment_1) ~ (St + factor(Re) + factor(Fr) + factor(Re)*factor(Fr)),   # model to fit
+                     data = trainData,                        
+                     trControl = data_ctrl,              # folds
+                     method = "lm",                      # specifying regression model
+                     na.action = na.pass)   
+
+model_caret
+```
 
 
 ## Polynomial Regression
