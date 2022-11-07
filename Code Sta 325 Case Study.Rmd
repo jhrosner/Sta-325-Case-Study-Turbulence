@@ -29,11 +29,10 @@ library(ggpubr)
 ## Introduction
 
 
-## Data (dont include)
+## Load Data
 ```{r}
 data_train <- read.csv("data-train.csv")
 data_test <- read.csv("data-test.csv")
-data_train
 ```
 
 ## Goals (include in writeup)
@@ -52,22 +51,24 @@ summary(data_train)
 ### Histograms
 
 ```{r}
-hist(data_train$R_moment_1)
-hist(data_train$R_moment_2)
-hist(data_train$R_moment_3)
-hist(data_train$R_moment_4)
-hist(data_train$Fr, breaks=20)
-hist(data_train$St, breaks=20)
-hist(data_train$Re, breaks=20)
+par(mfrow = c(2, 4))
+hist(data_train$R_moment_1, main = paste("R_moment_1 Histogram"))
+hist(data_train$R_moment_2, main = paste("R_moment_2 Histogram"))
+hist(data_train$R_moment_3, main = paste("R_moment_3 Histogram"))
+hist(data_train$R_moment_4, main = paste("R_moment_3 Histogram"))
+hist(data_train$Fr, breaks=20, main = paste("Fr Histogram"))
+hist(data_train$St, breaks=20, main = paste("St Histogram"))
+hist(data_train$Re, breaks=20, main = paste("Re Histogram"))
 ```
 
 These histograms indicate that each R_moment has distributions that are heavily skewed to the right, because the data has many rows of 0. In R_moment_3 and R_moment_4, we notice that the maximum values are extremely high, while the medians are much smaller in comparison. This could pose a problem to our analysis, thus we believe it is best then to apply a transformation to these variables in order to obtain more accurate analysis.
 
 ```{r}
-hist(log(data_train$R_moment_1), breaks=20)
-hist(log(data_train$R_moment_2), breaks=20)
-hist(log(data_train$R_moment_3), breaks=20)
-hist(log(data_train$R_moment_4), breaks=20)
+par(mfrow = c(2, 2))
+hist(log(data_train$R_moment_1), breaks=20, main = paste("Histogram log(R_moment_1)"))
+hist(log(data_train$R_moment_2), breaks=20, main = paste("Histogram log(R_moment_2)"))
+hist(log(data_train$R_moment_3), breaks=20, main = paste("Histogram log(R_moment_3)"))
+hist(log(data_train$R_moment_4), breaks=20, main = paste("Histogram log(R_moment_4)"))
 ```
 Performing a log transformation on these variables created more normally distributed variables. While not perfectly normal, this is a big improvement to the non-transformed variables. We will use the log version of variables and will reflect these transformed variables as such in our interpretations and analysis. 
 
@@ -137,6 +138,7 @@ summary(model3)
 model4 <- lm(log(R_moment_4) ~ St + factor(Re) + factor(Fr), data=data_train)
 summary(model4)
 ```
+
 
 Exploring collinearity:
 
