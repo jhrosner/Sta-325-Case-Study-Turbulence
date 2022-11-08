@@ -194,8 +194,8 @@ poly_cv4_results$Moment <- "Moment 4"
 cv_results <- rbind(poly_cv1_results, poly_cv2_results, poly_cv3_results, poly_cv4_results)
 cv_results_final <- as.data.frame(t(cv_results[,-4]))
 colnames(cv_results_final) <- cv_results$Moment
-kable(cv_results_final, digits=3)%>%
-  kable_styling(font_size=8)
+kable(cv_results_final, digits=3, caption = "Cubic polynomial 5-fold CV")%>%
+  kable_styling(font_size=8, latex_options = "HOLD_position")
 ```
 
   From these models, we can gain insights into how Re, Fr, and St affect the probability distributions for particle cluster volumes. We can see that a larger Reynolds number would lead to lower predictions for all four moments. This means that as the ratio of fluid momentum force to viscous shear force increases, the mean of the distribution would decrease, the variance would decrease, the distribution will skew more to the right, and the tail will be lighter. This is in line with our knowledge that higher Reynolds numbers correspond to greater turbulent behavior. Likewise, an increase in gravitational acceleration decreases all four moments. 
@@ -237,8 +237,6 @@ pred.spline1 <- prediction$fit
 se.spline1 <- prediction$se.fit
 mse_spline1 <- mean((pred.spline1 - log(testing$R_moment_1))^2)
 r1=summary(spline1)$adj.r.squared
-
-spline1_original = spline1
 
 spline2 <- lm(log(R_moment_2) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
 prediction <- predict(spline2, testing, se.fit=TRUE)
@@ -284,7 +282,8 @@ interaction.spline.graphs
 mse_spline = rbind(c(mse_spline1, mse_spline2, mse_spline3, mse_spline4), c(r1, r2, r3, r4))
 colnames(mse_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
 rownames(mse_spline) = c("MSE", "Ajd R^2")
-#kable(mse_spline, digits=3)
+kable(mse_spline, digits=3, caption = "Spline validation set metrics")%>%
+  kable_styling(font_size=8, latex_options = "HOLD_position")
 ```
 
 
@@ -304,13 +303,20 @@ pred.spline4 <- predict(spline4, data_test, se=TRUE)
 # make CSV to submit with prediction results
 pred_df <- data.frame(matrix(ncol = 4, nrow = nrow(data_test)))
 colnames(pred_df) <- c('R_moment_1', 'R_moment_2', 'R_moment_3', 'R_moment_4')
-pred_df$R_moment_1 <- exp(pred.spline1$fit)
-pred_df$R_moment_2 <- exp(pred.spline2$fit)
-pred_df$R_moment_3 <- exp(pred.spline3$fit)
-pred_df$R_moment_4 <- exp(pred.spline4$fit)
+pred_df$R_moment_1 <- pred.spline1$fit
+pred_df$R_moment_2 <- pred.spline2$fit
+pred_df$R_moment_3 <- pred.spline3$fit
+pred_df$R_moment_4 <- pred.spline4$fit
 pred_df <- pred_df %>% discard(~all(is.na(.) | . ==""))
-pred_result_df <- cbind(data_test, pred_df)
-write.csv(pred_result_df,"data-test-predictions.csv", row.names = FALSE)
+pred_df <- cbind(data_test, pred_df)
+
+pred_result_df <- pred_df
+pred_result_df$R_moment_1 <- exp(pred_df$R_moment_1)
+pred_result_df$R_moment_2 <- exp(pred_df$R_moment_2)
+pred_result_df$R_moment_3 <- exp(pred_df$R_moment_3)
+pred_result_df$R_moment_4 <- exp(pred_df$R_moment_4)
+
+#write.csv(pred_result_df,"data-test-predictions.csv", row.names = FALSE)
 
 pred_df$SE1 <- pred.spline1$se.fit
 pred_df$SE2 <- pred.spline2$se.fit
@@ -320,25 +326,30 @@ pred_df$SE4 <- pred.spline4$se.fit
 # Table of Standard Errors for Predictions
 se_spline = matrix(c(pred.spline1$se.fit, pred.spline2$se.fit, pred.spline3$se.fit, pred.spline4$se.fit),ncol=4)
 colnames(se_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
-kable(se_spline, digits=3)%>%
-  kable_styling(font_size=8)
+kable(se_spline, digits=3, caption = "Standard errors for validation set predictions")%>%
+  kable_styling(font_size=8, latex_options = "HOLD_position")
 ```
 
 ## Results
+
 ```{r echo=FALSE, warning=FALSE, out.width="70%", out.height="70%"}
-# st_p1 <- ggplot(pred_df, aes(x = St, y = R_moment_1)) + 
-#   geom_point() + 
-#   geom_errorbar(aes(ymin=R_moment_1-SE1, ymax=R_moment_1+SE1))
-# st_p2 <- ggplot(pred_df, aes(x = St, y = R_moment_2)) +
-#   geom_point() +
-#   geom_errorbar(aes(ymin=R_moment_2-SE2, ymax=R_moment_2+SE2))
-# st_p3 <- ggplot(pred_df, aes(x = St, y = R_moment_3)) +
-#   geom_point() +
-#   geom_errorbar(aes(ymin=R_moment_3-SE3, ymax=R_moment_3+SE3))
-# st_p4 <- ggplot(pred_df, aes(x = St, y = R_moment_4)) +
-#   geom_point() +
-#   geom_errorbar(aes(ymin=R_moment_4-SE4, ymax=R_moment_4+SE4))
-# ggarrange(st_p1, st_p2, st_p3, st_p4)
+st_p1 <- ggplot(pred_df, aes(x = St, y = R_moment_1)) +
+  geom_point() +
+  geom_errorbar(aes(ymin=R_moment_1-SE1, ymax=R_moment_1+SE1), color="red")+ 
+  labs(title = "Raw moment 1 predictions", subtitle = "Spline with Fr*Re interaction")
+st_p2 <- ggplot(pred_df, aes(x = St, y = R_moment_2)) +
+  geom_point() +
+  geom_errorbar(aes(ymin=R_moment_2-SE2, ymax=R_moment_2+SE2), color="red")+ 
+  labs(title = "Raw moment 2 predictions", subtitle = "Spline with Fr*Re interaction")
+st_p3 <- ggplot(pred_df, aes(x = St, y = R_moment_3)) +
+  geom_point() +
+  geom_errorbar(aes(ymin=R_moment_3-SE3, ymax=R_moment_3+SE3), color="red")+ 
+  labs(title = "Raw moment 3 predictions", subtitle = "Spline with Fr*Re interaction")
+st_p4 <- ggplot(pred_df, aes(x = St, y = R_moment_4)) +
+  geom_point() +
+  geom_errorbar(aes(ymin=R_moment_4-SE4, ymax=R_moment_4+SE4), color="red")+ 
+  labs(title = "Raw moment 4 predictions", subtitle = "Spline with Fr*Re interaction")
+ggarrange(st_p1, st_p2, st_p3, st_p4)
 ```
 
 
@@ -351,5 +362,3 @@ kable(se_spline, digits=3)%>%
   To better understand the relative influence of turbulence, gravitational acceleration and particle characteristics on cluster formation, we examined the coefficients in our inference model. For raw moment 1 and central moments 2, 3, and 4, we see that interactions between Fr(0.3):Re(224), Fr(Inf):Re(398), and Fr(Inf):Re(224) are all positive, and increase at higher levels of Re and any level of Fr. Thus, higher Re levels and any Fr level yields an expected increase in log particle cluster volume size. For raw moment 1, this suggests that smoother flow at any level of gravitational acceleration may allow larger clusters to form, as they are not broken up by chaotic turbulence. For central moments 2, 3, and 4, this suggests that smoother flow with at any gravitational acceleration seemed to have a positive association with variance, skew, and kurtosis. Finally, the effects of particle size on each moment seems to significantly increase as our moment number increases. 
   
   Every coefficient across our 4 inference models are all statistically significant at the $\alpha = 0.01$ level with small standard errors, with the exception of the $poly(log(St), 3)^2$ coefficient, which has a p-value of 0.0658, in our inference model for the first raw moment.
-
-
