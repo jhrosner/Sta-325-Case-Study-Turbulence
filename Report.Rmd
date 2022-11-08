@@ -37,13 +37,13 @@ Understanding and predicting turbulence in fluid motion is incredibly important 
 
 #### Inference
 
-Our univariate exploratory data analysis of (Re, Fr, St) and each moment revealed that the R moments are heavily right skewed, which poses a problem to linear regression. We applied log transformations on each moment to obtain more normally distributed variables. We did not change the first raw moment to the central moment, because the mean of the distribution conveys more meaningful information than the central moment, which is always zero. However, we converted the second, third, and fourth raw moments to central moments for inference so that our results are more interpretable. 
+  Our univariate exploratory data analysis of (Re, Fr, St) and each moment revealed that the R moments are heavily right skewed, which poses a problem to linear regression. We applied log transformations on each moment to obtain more normally distributed variables. We did not change the first raw moment to the central moment, because the mean of the distribution conveys more meaningful information than the central moment, which is always zero. However, we converted the second, third, and fourth raw moments to central moments for inference so that our results are more interpretable. 
   
-In addition, despite their numerical natures, Fr and Re only contain three levels ($Fr \in \{0.052, 0.3, \infty\}$ and $Re \in \{90, 224, 398\}$) in the training data. We decided to make them categorical variables for our inference model for 2 main reasons. Firstly, treating them as numeric variables puts our model at risk for extrapolation due to lack of data at many levels of Re and Fr, making our model unable to learn the trends around such regions; and secondly, we believe that these categories could carry real life significance. For instance, Fr = 0.3 is representative of cumulonimbus clouds and 0.052 is representative of cumulus clouds. Focusing on observations collected at such specific levels may lend unique insights into practical problems. 
+  In addition, despite their numerical natures, Fr and Re only contain three levels ($Fr \in \{0.052, 0.3, \infty\}$ and $Re \in \{90, 224, 398\}$). We decided to make them categorical variables for our inference model for 2 main reasons. Firstly, treating them as numeric variables puts our model at risk for extrapolation due to lack of data at many levels of Re and Fr, making our model unable to learn the trends around such regions; and secondly, we believe that these categories could carry real life significance. For instance, Fr = 0.3 is representative of cumulonimbus clouds and 0.052 is representative of cumulus clouds. Focusing on observations collected at such specific levels may lend unique insights into practical problems. 
   
-A closer examination of the data revealed interesting interactive patterns among the independent and dependent variables. Specifically, St appears to assume a strong, non-linear relationship with each of the moments. This relationship between St and R moments appeared logarithmic, so we log-transformed St. Also, while treating the Fr variable as categorical, we observed that there is a linear and decreasing relationship between Fr (gravitational acceleration) and R moments. Lastly, there is also a linear and decreasing relationship between Re (Reynolds number) and R moments. We also explored multicollinearity through VIFs for each model, which were very low.
+  A closer examination of the data revealed interesting interactive patterns among the independent and dependent variables. Specifically, St appears to assume a strong, non-linear relationship with each of the moments. This relationship between St and R moments appeared logarithmic, so we log-transformed St. Also, while treating the Fr variable as categorical, we observed that there is a linear and decreasing relationship between Fr (gravitational acceleration) and R moments. Lastly, there is also a linear and decreasing relationship between Re (Reynolds number) and R moments. We also explored multicollinearity through VIFs for each model, which were very low.
     
-Our final models for each of the moments for inference is a cubic polynomical with interaction terms between Re and Fr: 
+  Our final models for each of the moments for inference is a cubic polynomical with interaction terms between Re and Fr: 
 $$\begin{aligned}
 log(R_{moment1})=-2.048+2.002(log(St)) + 0.161(log(St))^2 + 0.446(log(St))^3 \\
 -3.824(Re_{224})-6.015(Re_{398})-0.286(Fr_{0.3})-0.317(Fr_{\infty}) \\
@@ -68,7 +68,7 @@ log(C_{moment4})=23.168+18.0035(log(St)) - 22.202(log(St))^2 + 8.469(log(St))^3 
 +12.755(Re_{224}*Fr_{0.3}) +12.576(Re_{224}*Fr_{\infty})+19.746(Re_{398}*Fr_{\infty})
 \end{aligned}$$
 
-Our goal for inference was to build a model that was both accurate and interpretable. In testing different models, we found that the linear model, while easy to interpret, performed quite poorly. On the other hand, the spline performed quite well, and ever better than the cubic polynomial, but was difficult to interpret. We compared different degrees of polynomial regression models using the validation set approach, and found that for all four moments, the test MSE began to flatten at the third degree. While higher degree polynomial models performed slightly better, we choose degree three avoid the issue of overfitting. Plots of our model predictions on the test set show that the predicted curves fit well to the testing points. We also performed 5-fold cross validation, which showed fairly low RMSE values and high $R^2$ values, further increasing confidence in the model's performance. 
+  Our goal for inference was to build a model that was both accurate and interpretable. In testing different models, we found that the linear model, while easy to interpret, performed quite poorly. On the other hand, the spline performed quite well, and ever better than the cubic polynomial, but was difficult to interpret. We compared different degrees of polynomial regression models using the validation set approach, and found that for all four moments, the test MSE began to flatten at the third degree. While higher degree polynomial models performed slightly better, we choose degree three avoid the issue of overfitting. Plots of our model predictions on the test set show that the predicted curves fit well to the testing points. We also performed 5-fold cross validation, which showed fairly low RMSE values and high $R^2$ values, further increasing confidence in the model's performance. 
 
 ```{r include=FALSE}
 data_train <- read.csv("data-train.csv")
@@ -131,6 +131,7 @@ interaction.poly.graphs = ggarrange(p1, p2, p3, p4, ncol=2, nrow=2)
 interaction.poly.graphs
 ```
 
+
 ```{r echo=FALSE, warning=FALSE}
 set.seed(123)
 
@@ -161,7 +162,9 @@ colnames(cv_results_final) <- cv_results$Moment
 kable(cv_results_final, digits=3)
 ```
 
-From these models, we can gain insights into how Re, Fr, and St affect the probability distributions for particle cluster volumes. We can see that a larger Reynolds number would lead to lower predictions for all four moments. This means that as the ratio of fluid momentum force to viscous shear force increases, the mean of the distribution would decrease, the variance would decrease, the distribution will skew more to the right, and the tail will be lighter. This is in line with our knowledge that higher Reynolds numbers correspond to greater turbulent behavior. Likewise, an increase in gravitational acceleration decreases all four moments. While interaction effects are usually less interpretable, in this case it makes sense to keep them in the final model. This is because high speeds cause turbulent flow, so the effect of turbulence (Re) on the distribution is different depending on the gravitational acceleration.
+  From these models, we can gain insights into how Re, Fr, and St affect the probability distributions for particle cluster volumes. We can see that a larger Reynolds number would lead to lower predictions for all four moments. This means that as the ratio of fluid momentum force to viscous shear force increases, the mean of the distribution would decrease, the variance would decrease, the distribution will skew more to the right, and the tail will be lighter. This is in line with our knowledge that higher Reynolds numbers correspond to greater turbulent behavior. Likewise, an increase in gravitational acceleration decreases all four moments. 
+  
+  Even though a higher Reynold’s number or gravitational acceleration alone have a negative effect on all four log expected moments, interaction effects with the two variables indicate that as both take on larger values at the same time, the coefficients take a positive effect, partially opposing the coefficient of the original negative effect. Thus, this may indicate that the proportion of Re and Fr together, with them either being both high or both low, mitigates the negative association on the log moment of a negative Re or a negative Fr on its own. While interaction effects are usually less interpretable, in this case it makes sense to keep them in the final model. This is because high speeds cause turbulent flow, so the effect of turbulence (Re) on the distribution is different depending on the gravitational acceleration.
 
 #### Prediction
   
@@ -397,6 +400,7 @@ ggarrange(st_p1, st_p2, st_p3, st_p4)
 #   geom_point()
 # ggarrange(fr_p1, fr_p2, fr_p3, fr_p4)
 ```
-```
 
 ## Conclusion
+
+  All three predictor variables display some significant statistical effect on particle clustering. In general, larger particle characteristics (i.e. size, density) lead to higher first moments. Higher fluid turbulence (Re) and gravitational acceleration lead to lower values of all four moments, but this is partially mitigated if they are both high as evidenced by the coefficients of the interaction effects, rather than one of these two values being individually high. Furthermore, in higher moments we see evidence of non-linearities between the variables.
