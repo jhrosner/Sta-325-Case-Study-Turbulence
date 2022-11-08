@@ -233,13 +233,13 @@ pr2m4_1=summary(fit.lm4)$adj.r.squared
 ```
 
 ```{r include=FALSE}
-polym1 <- lm(log(R_moment_1) ~ poly(log(St), 2) + factor(Re) + factor(g(Fr)), data = training)
-poly2m1 <- lm(log(R_moment_1) ~ poly(log(St), 3) + factor(Re) + factor(g(Fr)), data = training)
-poly3m1 <- lm(log(R_moment_1) ~ poly(log(St), 4) + factor(Re) + factor(g(Fr)), data = training)
-poly4m1 <- lm(log(R_moment_1) ~ poly(log(St), 5) + factor(Re) + factor(g(Fr)), data = training)
-poly5m1 <- lm(log(R_moment_1) ~ poly(log(St), 6) + factor(Re) + factor(g(Fr)), data = training)
-poly6m1 <- lm(log(R_moment_1) ~ poly(log(St), 7) + factor(Re) + factor(g(Fr)), data = training)
-poly7m1 <- lm(log(R_moment_1) ~ poly(log(St), 8) + factor(Re) + factor(g(Fr)), data = training)
+polym1 <- lm(log(R_moment_1) ~ poly(log(St), 2) + factor(Re) + factor(g(Fr) + factor(Re)*factor(Fr)), data = training)
+poly2m1 <- lm(log(R_moment_1) ~ poly(log(St), 3) + factor(Re) + factor(g(Fr) + factor(Re)*factor(Fr)), data = training)
+poly3m1 <- lm(log(R_moment_1) ~ poly(log(St), 4) + factor(Re) + factor(g(Fr) + factor(Re)*factor(Fr)), data = training)
+poly4m1 <- lm(log(R_moment_1) ~ poly(log(St), 5) + factor(Re) + factor(g(Fr) + factor(Re)*factor(Fr)), data = training)
+poly5m1 <- lm(log(R_moment_1) ~ poly(log(St), 6) + factor(Re) + factor(g(Fr) + factor(Re)*factor(Fr)), data = training)
+poly6m1 <- lm(log(R_moment_1) ~ poly(log(St), 7) + factor(Re) + factor(g(Fr) + factor(Re)*factor(Fr)), data = training)
+poly7m1 <- lm(log(R_moment_1) ~ poly(log(St), 8) + factor(Re) + factor(g(Fr) + factor(Re)*factor(Fr)), data = training)
 anova(fit.lm1, polym1, poly2m1, poly3m1, poly4m1, poly5m1, poly6m1, poly7m1)
 pred.polym1 <- predict(polym1, testing)
 pred.poly2m1 <- predict(poly2m1, testing)
@@ -265,13 +265,13 @@ pr2m1_8=summary(poly7m1)$adj.r.squared
 ```
 
 ```{r include=FALSE}
-polym2 <- lm(log(R_moment_2) ~ poly(log(St), 2) + factor(Re) + factor(g(Fr)), data = training)
-poly2m2 <- lm(log(R_moment_2) ~ poly(log(St), 3) + factor(Re) + factor(g(Fr)), data = training)
-poly3m2 <- lm(log(R_moment_2) ~ poly(log(St), 4) + factor(Re) + factor(g(Fr)), data = training)
-poly4m2 <- lm(log(R_moment_2) ~ poly(log(St), 5) + factor(Re) + factor(g(Fr)), data = training)
-poly5m2 <- lm(log(R_moment_2) ~ poly(log(St), 6) + factor(Re) + factor(g(Fr)), data = training)
-poly6m2 <- lm(log(R_moment_2) ~ poly(log(St), 7) + factor(Re) + factor(g(Fr)), data = training)
-poly7m2 <- lm(log(R_moment_2) ~ poly(log(St), 8) + factor(Re) + factor(g(Fr)), data = training)
+polym2 <- lm(log(R_moment_2) ~ poly(log(St), 2) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
+poly2m2 <- lm(log(R_moment_2) ~ poly(log(St), 3) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
+poly3m2 <- lm(log(R_moment_2) ~ poly(log(St), 4) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
+poly4m2 <- lm(log(R_moment_2) ~ poly(log(St), 5) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
+poly5m2 <- lm(log(R_moment_2) ~ poly(log(St), 6) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
+poly6m2 <- lm(log(R_moment_2) ~ poly(log(St), 7) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
+poly7m2 <- lm(log(R_moment_2) ~ poly(log(St), 8) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
 anova(fit.lm2, polym2, poly2m2, poly3m2, poly4m2, poly5m2, poly6m2, poly7m2)
 pred.polym2 <- predict(polym2, testing)
 pred.poly2m2 <- predict(poly2m2, testing)
@@ -297,13 +297,13 @@ pr2m2_8=summary(poly7m2)$adj.r.squared
 ```
 
 ```{r include=FALSE}
-polym3 <- lm(log(R_moment_3) ~ poly(log(St), 2) + factor(Re) + factor(g(Fr)), data = training)
-poly2m3 <- lm(log(R_moment_3) ~ poly(log(St), 3) + factor(Re) + factor(g(Fr)), data = training)
-poly3m3 <- lm(log(R_moment_3) ~ poly(log(St), 4) + factor(Re) + factor(g(Fr)), data = training)
-poly4m3 <- lm(log(R_moment_3) ~ poly(log(St), 5) + factor(Re) + factor(g(Fr)), data = training)
-poly5m3 <- lm(log(R_moment_3) ~ poly(log(St), 6) + factor(Re) + factor(g(Fr)), data = training)
-poly6m3 <- lm(log(R_moment_3) ~ poly(log(St), 7) + factor(Re) + factor(g(Fr)), data = training)
-poly7m3 <- lm(log(R_moment_3) ~ poly(log(St), 8) + factor(Re) + factor(g(Fr)), data = training)
+polym3 <- lm(log(R_moment_3) ~ poly(log(St), 2) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
+poly2m3 <- lm(log(R_moment_3) ~ poly(log(St), 3) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
+poly3m3 <- lm(log(R_moment_3) ~ poly(log(St), 4) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
+poly4m3 <- lm(log(R_moment_3) ~ poly(log(St), 5) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
+poly5m3 <- lm(log(R_moment_3) ~ poly(log(St), 6) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
+poly6m3 <- lm(log(R_moment_3) ~ poly(log(St), 7) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
+poly7m3 <- lm(log(R_moment_3) ~ poly(log(St), 8) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
 anova(fit.lm3, polym3, poly2m3, poly3m3, poly4m3, poly5m3, poly6m3, poly7m3)
 pred.polym3 <- predict(polym3, testing)
 pred.poly2m3 <- predict(poly2m3, testing)
@@ -329,13 +329,13 @@ pr2m3_8=summary(poly7m3)$adj.r.squared
 ```
 
 ```{r include=FALSE}
-polym4 <- lm(log(R_moment_4) ~ poly(log(St), 2) + factor(Re) + factor(g(Fr)), data = training)
-poly2m4 <- lm(log(R_moment_4) ~ poly(log(St), 3) + factor(Re) + factor(g(Fr)), data = training)
-poly3m4 <- lm(log(R_moment_4) ~ poly(log(St), 4) + factor(Re) + factor(g(Fr)), data = training)
-poly4m4 <- lm(log(R_moment_4) ~ poly(log(St), 5) + factor(Re) + factor(g(Fr)), data = training)
-poly5m4 <- lm(log(R_moment_4) ~ poly(log(St), 6) + factor(Re) + factor(g(Fr)), data = training)
-poly6m4 <- lm(log(R_moment_4) ~ poly(log(St), 7) + factor(Re) + factor(g(Fr)), data = training)
-poly7m4 <- lm(log(R_moment_4) ~ poly(log(St), 8) + factor(Re) + factor(g(Fr)), data = training)
+polym4 <- lm(log(R_moment_4) ~ poly(log(St), 2) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
+poly2m4 <- lm(log(R_moment_4) ~ poly(log(St), 3) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
+poly3m4 <- lm(log(R_moment_4) ~ poly(log(St), 4) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
+poly4m4 <- lm(log(R_moment_4) ~ poly(log(St), 5) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
+poly5m4 <- lm(log(R_moment_4) ~ poly(log(St), 6) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
+poly6m4 <- lm(log(R_moment_4) ~ poly(log(St), 7) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
+poly7m4 <- lm(log(R_moment_4) ~ poly(log(St), 8) + factor(Re) + factor(g(Fr)+ factor(Re)*factor(Fr)), data = training)
 anova(fit.lm4, polym4, poly2m4, poly3m4, poly4m4, poly5m4, poly6m4, poly7m4)
 pred.polym4 <- predict(polym4, testing)
 pred.poly2m4 <- predict(poly2m4, testing)
