@@ -944,22 +944,30 @@ Really bad results, interaction terms aren't helping much. Let's try some other 
 
 ```{r, message = FALSE, warning = FALSE}
 spline1 <- lm(log(R_moment_1) ~ bs(log(St)) + bs(Re) + bs(g(Fr)), data = training)
-pred.spline1 <- predict(spline1, testing)
+prediction <- predict(spline1, testing, se.fit=TRUE)
+pred.spline1 <- prediction$fit
+se.spline1 <- prediction$se.fit
 mse_spline1 <- mean((pred.spline1 - log(testing$R_moment_1))^2)
 r1=summary(spline1)$adj.r.squared
 
 spline2 <- lm(log(R_moment_2) ~ bs(log(St)) + bs(Re) + bs(g(Fr)), data = training)
-pred.spline2 <- predict(spline2, testing)
+prediction <- predict(spline2, testing, se.fit=TRUE)
+pred.spline2 <- prediction$fit
+se.spline2 <- prediction$se.fit
 mse_spline2 <- mean((pred.spline2 - log(testing$R_moment_2))^2)
 r2=summary(spline2)$adj.r.squared
 
 spline3 <- lm(log(R_moment_3) ~ bs(log(St)) + bs(Re) + bs(g(Fr)), data = training)
-pred.spline3 <- predict(spline3, testing)
+prediction <- predict(spline3, testing, se.fit=TRUE)
+pred.spline3 <- prediction$fit
+se.spline3 <- prediction$se.fit
 mse_spline3 <- mean((pred.spline3 - log(testing$R_moment_3))^2)
 r3=summary(spline3)$adj.r.squared
 
 spline4 <- lm(log(R_moment_4) ~ bs(log(St)) + bs(Re) + bs(g(Fr)), data = training)
-pred.spline4 <- predict(spline4, testing)
+prediction <- predict(spline4, testing, se.fit=TRUE)
+pred.spline4 <- prediction$fit
+se.spline4 <- prediction$se.fit
 mse_spline4 <- mean((pred.spline4 - log(testing$R_moment_4))^2)
 r4=summary(spline4)$adj.r.squared
 
@@ -995,22 +1003,30 @@ Splines definitely perform better than linear regression, but still room for imp
 
 ```{r, message = FALSE, warning = FALSE}
 spline1 <- lm(log(R_moment_1) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
-pred.spline1 <- predict(spline1, testing)
+prediction <- predict(spline1, testing, se.fit=TRUE)
+pred.spline1 <- prediction$fit
+se.spline1 <- prediction$se.fit
 mse_spline1 <- mean((pred.spline1 - log(testing$R_moment_1))^2)
 r1=summary(spline1)$adj.r.squared
 
 spline2 <- lm(log(R_moment_2) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
-pred.spline2 <- predict(spline2, testing)
+prediction <- predict(spline2, testing, se.fit=TRUE)
+pred.spline2 <- prediction$fit
+se.spline2 <- prediction$se.fit
 mse_spline2 <- mean((pred.spline2 - log(testing$R_moment_2))^2)
 r2=summary(spline2)$adj.r.squared
 
 spline3 <- lm(log(R_moment_3) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
-pred.spline3 <- predict(spline3, testing)
+prediction <- predict(spline3, testing, se.fit=TRUE)
+pred.spline3 <- prediction$fit
+se.spline3 <- prediction$se.fit
 mse_spline3 <- mean((pred.spline3 - log(testing$R_moment_3))^2)
 r3=summary(spline3)$adj.r.squared
 
 spline4 <- lm(log(R_moment_4) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
-pred.spline4 <- predict(spline4, testing)
+prediction <- predict(spline4, testing, se.fit=TRUE)
+pred.spline4 <- prediction$fit
+se.spline4 <- prediction$se.fit
 mse_spline4 <- mean((pred.spline4 - log(testing$R_moment_4))^2)
 r4=summary(spline4)$adj.r.squared
 
@@ -1037,8 +1053,11 @@ mse_spline = rbind(c(mse_spline1, mse_spline2, mse_spline3, mse_spline4), c(r1, 
 colnames(mse_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
 rownames(mse_spline) = c("MSE", "Ajd R^2")
 kable(mse_spline, digits=3)
-```
 
+se_spline = matrix(c(se.spline1, se.spline2, se.spline3, se.spline4),ncol=4)
+colnames(se_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
+kable(se_spline, digits=3)
+```
 
 Adding the interaction term to the splines makes the performance of this model superior to anything we've used previously (when considering numerical datapoints) based on Adj $R^2$ and MSE in test validation.
 

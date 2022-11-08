@@ -46,13 +46,16 @@ DISCUSS SPLINE MODEL WITH INTERACTIONS
 
 
 #### Prediction
-
-  Despite certain advantages in modeling Re and Fr as categorical variables, we recognize the need to extrapolate beyond the three levels of Re and Fr to model real life circumstances and enable a wider range of prediction. To address the limitations of our current models, we provide the following related models using splines that can be used for extrapolation.
-  In these models, Re is nuemric, and we transformed Fr to get rid of the infinity value that it takes on.
   
   One of our goals for this case study was to make a model that is specialized in making accurate predictions, meaning that we are not concerned with inference for this particular model. Because we are not concerned with interpreting this model, we explored more complex models because they tend to have better predictive performance than simple models.
-
-In order to predict values for new observations between and/or outside the ranges of values we have seen, we had to make a model that could both interpolate and extrapolate. Instead of using categorical values for our predictor variables Fr and Re, we used numerical values so that our model is more generalizable to accept numerical values between or outside the ranges of Fr and Re that were given in the training data. In order to make Fr a numerical variable, we needed to perform a transformation on it to make Fr take on only finite values for modeling. To do this, we transformed Fr so that the new value is equal to $1 - 2^{-Fr}$, so that the new Fr takes on values between 0 and 1.
+  
+  Despite certain advantages in modeling Re and Fr as categorical variables, we recognize the need to extrapolate beyond the three levels of Re and Fr to model real life circumstances and enable a wider range of prediction. In order to predict values for new observations between and/or outside the ranges of values we have seen, we had to make a model that could both interpolate and extrapolate. Instead of using categorical values for our predictor variables Fr and Re, we used numerical values so that our model is more generalizable to accept numerical values between or outside the ranges of Fr and Re that were given in the training data. In order to make Fr a numerical variable, we needed to perform a transformation on it to make Fr take on finite values for modeling. To do this, we transformed Fr so that the new value is equal to $1 - 2^{-Fr}$, so that the new Fr takes on values between 0 and 1.
+  
+  After exploring linear and polynomial models both with and without interaction terms, we were still not satisfied with the accuracy of these models. Since the performance of our simpler models still showed much room for improvement, we further explored cubic splines with an interaction between Fr and Re. We expected the splines to perform better compared to polynomial regression because instead of fitting a single polynomial function to the entire dataset, spline interpolation fits a piecewise continuous function composed of many polynomials to model the data set. 
+  
+  We did analysis on cubic spline models with and without interaction terms, and as we expected, the model including the interaction between Fr and Re outperformed the model with no interaction. To analyze predictive performance of our spline model, we applied an 80/20 train-test split and performed 5-fold cross validation. The cubic spline with the interaction term for Re and Fr outperformed any other model we created thus far, as it had extremely high $R^2$ values and it produced lower test MSEs for all four R moments.
+  
+  
 
 DISCUSS PREDICTION SPLINE MODEL W INTERACTIONS
   
@@ -575,22 +578,30 @@ moments = list(data_train$R_moment_1, data_train$R_moment_2, data_train$R_moment
 ```{r, echo=FALSE, message = FALSE, warning = FALSE}
 # Splines (numeric predictors) (WITH interaction)
 spline1 <- lm(log(R_moment_1) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
-pred.spline1 <- predict(spline1, testing)
+prediction <- predict(spline1, testing, se.fit=TRUE)
+pred.spline1 <- prediction$fit
+se.spline1 <- prediction$se.fit
 mse_spline1 <- mean((pred.spline1 - log(testing$R_moment_1))^2)
 r1=summary(spline1)$adj.r.squared
 
 spline2 <- lm(log(R_moment_2) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
-pred.spline2 <- predict(spline2, testing)
+prediction <- predict(spline2, testing, se.fit=TRUE)
+pred.spline2 <- prediction$fit
+se.spline2 <- prediction$se.fit
 mse_spline2 <- mean((pred.spline2 - log(testing$R_moment_2))^2)
 r2=summary(spline2)$adj.r.squared
 
 spline3 <- lm(log(R_moment_3) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
-pred.spline3 <- predict(spline3, testing)
+prediction <- predict(spline3, testing, se.fit=TRUE)
+pred.spline3 <- prediction$fit
+se.spline3 <- prediction$se.fit
 mse_spline3 <- mean((pred.spline3 - log(testing$R_moment_3))^2)
 r3=summary(spline3)$adj.r.squared
 
 spline4 <- lm(log(R_moment_4) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
-pred.spline4 <- predict(spline4, testing)
+prediction <- predict(spline4, testing, se.fit=TRUE)
+pred.spline4 <- prediction$fit
+se.spline4 <- prediction$se.fit
 mse_spline4 <- mean((pred.spline4 - log(testing$R_moment_4))^2)
 r4=summary(spline4)$adj.r.squared
 
@@ -617,6 +628,10 @@ mse_spline = rbind(c(mse_spline1, mse_spline2, mse_spline3, mse_spline4), c(r1, 
 colnames(mse_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
 rownames(mse_spline) = c("MSE", "Ajd R^2")
 kable(mse_spline, digits=3)
+
+se_spline = matrix(c(se.spline1, se.spline2, se.spline3, se.spline4),ncol=4)
+colnames(se_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
+kable(se_spline, digits=3)
 ```
 
 ```{r include=FALSE}
