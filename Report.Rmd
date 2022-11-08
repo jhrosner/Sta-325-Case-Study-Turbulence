@@ -547,54 +547,6 @@ moments = list(data_train$R_moment_1, data_train$R_moment_2, data_train$R_moment
 ```
 
 ```{r, echo=FALSE, message = FALSE, warning = FALSE}
-# Splines (numeric predictors) (NO interaction)
-spline1 <- lm(log(R_moment_1) ~ bs(log(St)) + bs(Re) + bs(g(Fr)), data = training)
-pred.spline1 <- predict(spline1, testing)
-mse_spline1 <- mean((pred.spline1 - log(testing$R_moment_1))^2)
-r1=summary(spline1)$adj.r.squared
-
-spline2 <- lm(log(R_moment_2) ~ bs(log(St)) + bs(Re) + bs(g(Fr)), data = training)
-pred.spline2 <- predict(spline2, testing)
-mse_spline2 <- mean((pred.spline2 - log(testing$R_moment_2))^2)
-r2=summary(spline2)$adj.r.squared
-
-spline3 <- lm(log(R_moment_3) ~ bs(log(St)) + bs(Re) + bs(g(Fr)), data = training)
-pred.spline3 <- predict(spline3, testing)
-mse_spline3 <- mean((pred.spline3 - log(testing$R_moment_3))^2)
-r3=summary(spline3)$adj.r.squared
-
-spline4 <- lm(log(R_moment_4) ~ bs(log(St)) + bs(Re) + bs(g(Fr)), data = training)
-pred.spline4 <- predict(spline4, testing)
-mse_spline4 <- mean((pred.spline4 - log(testing$R_moment_4))^2)
-r4=summary(spline4)$adj.r.squared
-
-# Don't include these plots if no room!
-p1 = ggplot(testing, aes(x = St, y = log(R_moment_1), color = factor(Re))) +
-  geom_point() +
-  geom_line(aes(x = St, y = pred.spline1), size = 1) +
-  labs(title = "Spline Predictions - Moment 1")
-p2 = ggplot(testing, aes(x = St, y = log(R_moment_2), color = factor(Re))) +
-  geom_point() +
-  geom_line(aes(x = St, y = pred.spline2), size = 1) +
-  labs(title = "Spline Predictions - Moment 2")
-p3 = ggplot(testing, aes(x = St, y = log(R_moment_3), color = factor(Re))) +
-  geom_point() +
-  geom_line(aes(x = St, y = pred.spline3), size = 1) +
-  labs(title = "Spline Predictions - Moment 3")
-p4 = ggplot(testing, aes(x = St, y = log(R_moment_4), color = factor(Re))) +
-  geom_point() +
-  geom_line(aes(x = St, y = pred.spline4), size = 1) +
-  labs(title = "Spline Predictions - Moment 4")
-spline.graphs = ggarrange(p1, p2, p3, p4, ncol=2, nrow=2)
-spline.graphs
-
-mse_spline = rbind(c(mse_spline1, mse_spline2, mse_spline3, mse_spline4), c(r1, r2, r3, r4))
-colnames(mse_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
-rownames(mse_spline) = c("MSE", "Ajd R^2")
-kable(mse_spline, digits=3)
-```
-
-```{r, echo=FALSE, message = FALSE, warning = FALSE}
 # Splines (numeric predictors) (WITH interaction)
 spline1 <- lm(log(R_moment_1) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
 pred.spline1 <- predict(spline1, testing)
