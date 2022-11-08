@@ -10,7 +10,6 @@ date: "2022-11-3"
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60), tidy = TRUE)
 library(tidyverse)
 library(dplyr)
 library(broom)
@@ -24,7 +23,10 @@ library(leaps)
 library(glmnet)
 library(mgcv)
 library(car)
-library(formatR)
+library(splines)
+library(ggpubr)
+library(boot)
+library(caret)
 ```
 
 ## Introduction
@@ -32,29 +34,142 @@ Understanding and predicting turbulence in fluid motion is incredibly important 
 
 ## Methodology
 ##### Linear Modeling
-  Our univariate exploratory data analysis of Re, Fr, St, and each moment revealed that the R moments are heavily right skewed, which poses a problem to linear regression. We applied log transformations on each moment to obtain more normally distributed variables. The log-transformed R moments are approximately normal, so we will use these values for inference and prediction. It appears that the relationship between St and R moments are linear. From what we can see, treating the Fr variable as categorical, there is also a linear and decreasing relationship between Fr (gravitational acceleration) and R moments. Lastly, there is also a linear and decreasing relationship between Re (Reynold's number) and R moments. 
+  Our univariate exploratory data analysis of (Re, Fr, St) and each moment revealed that the R moments are heavily right skewed, which poses a problem to linear regression. We applied log transformations on each moment to obtain more normally distributed variables. #Additionally, we used raw moments for prediction, but converted raw moments to central moments for inference so that our results are more interpretable.# We also plotted each response variable (four moments) against each predictor variable to discern any relationships between them. From this, we saw that the relationship between St and R moments appear logarithmic, so we also log-transformed St. #Also transformation to get rid of infinity# From what we can see, treating the Fr variable as categorical, there is also a linear and decreasing relationship between Fr (gravitational acceleration) and R moments. Lastly, there is also a linear and decreasing relationship between Re (Reynold's number) and R moments. We also explored multicollinearity through VIFs for each model, which were very low.
   
-  Accordingly, we fit a basic linear model onto each log-transformed response variable. Linear models were evaluated based on adjusted $R^2$ values and Pr(>|t-value|) for coefficient estimates. We chose to treat Re and Fr as factors or categorical variables, as Re only takes on the values of 90, 224, and 398; Fr only takes on the values 0.052, 0.3, and infinity. While the adjusted $R^2$ value for the first raw moment was very high at 0.9949, subsequent moments exhibited decreasing adjusted $R^2$ values, with the fourth raw moment having an adjusted $R^2$ value of 0.6518. We explored multicollinearity through VIFs for each model, which were very low. We also explored the addition of interaction terms to the model. The only interaction term which was significant for all raw moments was the interaction between Re and Fr. St and Re only have significant interaction for the first moment. Therefore, we constructed the linear models with an interaction between Re and Fr:
-$$ \begin{aligned}
-log(R_{moment1})=-2.73+0.25(st)-3.816(Re_{224})-5.988(Re_{398})-0.263(Fr_{0.3})-.329(Fr_{\infty})+0.221(Re_{224}*Fr_{0.3}) \\
-+0.402(Re_{224}*Fr_{\infty})+0.502(Re_{398}*Fr_{\infty})
+  Accordingly, we fit a basic linear model onto each log-transformed response variable. Linear models were evaluated based on adjusted $R^2$ values and P-values for coefficient estimates. We chose to treat Re and Fr as factors or categorical variables, as Re only takes on the values of 90, 224, and 398; Fr only takes on the values 0.052, 0.3, and infinity. While the adjusted $R^2$ value for the first raw moment was very high at 0.9949, subsequent moments exhibited decreasing adjusted $R^2$ values, with the fourth raw moment having an adjusted $R^2$ value of 0.6518. We also explored the addition of interaction terms to the model. The only interaction term which was significant for all raw moments was the interaction between Re and Fr. St and Re only have significant interaction for the first moment. Therefore, we constructed the linear models with an interaction between Re and Fr:
+$$\begin{aligned}
+log(R_{moment1})=-2.73+0.25(st)-3.816(Re_{224})-5.988(Re_{398})-0.263(Fr_{0.3})-0.329(Fr_{\infty}) \\
++0.221(Re_{224}*Fr_{0.3}) +0.402(Re_{224}*Fr_{\infty})+0.502(Re_{398}*Fr_{\infty})
 \end{aligned}$$
-$$log(R_{moment2})=5.187+0.834(st)-7.434(Re_{224})-11.384(Re_{398})- 6.416(Fr_{0.3})$$
+
+$$\begin{aligned}
+log(R_{moment2})=5.187+0.834(st)-7.434(Re_{224})-11.384(Re_{398})-6.416(Fr_{0.3})-6.652 (Fr_{\infty}) \\
++4.387(Re_{224}*Fr_{0.3})+4.718(Re_{224}*Fr_{\infty})+7.076(Re_{398}*Fr_{\infty})
+\end{aligned}$$
+
+$$\begin{aligned}
+log(R_{moment2})=13.399+1.174(st)-11.164(Re_{224})-17.032(Re_{398})-12.478(Fr_{0.3})-12.772(Fr_{\infty})\\
++8.3648(Re_{224}*Fr_{0.3})+8.7718(Re_{224}*Fr_{\infty})+13.3707(Re_{398}*Fr_{\infty})
+\end{aligned}$$
+
+$$\begin{aligned}
+log(R_{moment2})=21.695+1.469(st)-14.906(Re_{224})-22.715(Re_{398})-18.471(Fr_{0.3})-18.811(Fr_{\infty})\\
++12.276(Re_{224}*Fr_{0.3})+12.756(Re_{224}*Fr_{\infty})+19.568(Re_{398}*Fr_{\infty})
+\end{aligned}$$
 
   Adding the interaction term between Re and Fr improved the fit of the model according to the adjusted R^2 values, which are much higher for every moment. With this new interaction term included, the adjusted R^2 value for R_moment_1 was slightly higher than before at 0.9966, and increased for moment 2 at 0.8909, moment 3 at 0.8770, and moment 4 0.8809 respectively. 
   
-  To analyze predictive performance of our models, we split data into training and testing sets to evaluate the predictive ability of the models we explored. The linear models with the interaction term for Re and Fr outperformed any other linear model, producing lower test MSEs for every moment of R. Having this interaction term significantly improved the test MSEs of the linear model.
-
-- interpret interaction between Re and Fr physically 
-- Are the effects identified above similar over all central moments (i.e., over all
-response variables), or are there effects which differ between, say, the mean and
-the variance? Try to interpret the latter effects using the three parameters mean
-physically
-- central vs raw moments? 
+  To analyze predictive performance of our models, we applied an 80/20 train-test split and performed 5-fold cross validation. The linear models with the interaction term for Re and Fr outperformed any other linear model, producing lower test MSEs for every moment of R. Having this interaction term significantly improved the test MSEs of the linear model. # ADD PHYSICAL EXPLANATION; Reynolds number:t the ratio of inertial forces to viscous forces within a fluid which is subjected to relative internal movement due to different fluid velocities. Whenever the Reynolds number is less than about 2,000, flow in a pipe is generally laminar, whereas, at values greater than 2,000, flow is usually turbulent. Once again, should we use central moments? Much easier to interpret: first central moment is related to mean, is always zero. Second central moment is the variance (spread) of the distribution. Third central moment measures symmetry, fourth central moment measures kurtosis (skewedness) of the distribution. 
   
-##### Polynomial Regression
+```{r include=FALSE}
+data_train <- read.csv("data-train.csv")
+data_test <- read.csv("data-test.csv")
+```
 
-  We also explore other linear models such as polynomial regression. Similarly we treat Fr and Re as categorical values and performed a log transformation on each raw moment as illustrated in the following function. In order to decide the optimal polynomial degree for each raw moment, we apply a simple validation approach to select the best among models with *D* different polynomial orders. However, after comparing the validation MSEs between those polynomial models and the above linear regression model with interactions, both training and testing accuracy are much smaller. 
+```{r, include=FALSE, results='asis'}
+# perform transformation on Fr to get rid of infinity
+g <- function(x) {
+  return (1 - 2^(-x))
+}
+
+printModels <- function(models) {
+  for (i in 1:length(models)) {
+    print(paste0("R Moment ", i))
+    print(knitr::kable(tidy(models[[i]]),
+                       digits=3))
+    stats = matrix(c(summary(models[[i]])$adj.r.squared, summary(models[[i]])$sigma),
+                   ncol=2)
+    colnames(stats) = c("Adj R^2", "Std Err")
+    print(knitr::kable(stats, digits=3))
+    cat('\n\n<!-- -->\n\n')
+  }
+}
+```
+
+```{r include=FALSE}
+#Create 5 equally size folds
+set.seed(325)
+folds <- cut(seq(1,nrow(data_train)),breaks=5,labels=FALSE)
+
+test_mses_noint <- list()
+#Perform 5 fold cross validation
+for(i in 1:5){
+    testIndexes <- which(folds==i,arr.ind=TRUE)
+    testData <- data_train[testIndexes, ]
+    trainData <- data_train[-testIndexes, ]
+  
+    fit.lm1 <- lm(log(R_moment_1) ~ (log(St) + factor(Re) + factor(g(Fr))), data = trainData)
+    pred.lm1 <- predict(fit.lm1, testData)
+    mse_test1 <- mean((pred.lm1 - log(testData$R_moment_1))^2)
+    fit.lm2 <- lm(log(R_moment_2) ~ (log(St) + factor(Re) + factor(g(Fr))), data = trainData)
+    pred.lm2 <- predict(fit.lm2, testData)
+    mse_test2 <- mean((pred.lm2 - log(testData$R_moment_2))^2)
+    fit.lm3 <- lm(log(R_moment_3) ~ (log(St) + factor(Re) + factor(g(Fr))), data = trainData)
+    pred.lm3 <- predict(fit.lm3, testData)
+    mse_test3 <- mean((pred.lm3 - log(testData$R_moment_3))^2)
+    fit.lm4 <- lm(log(R_moment_4) ~ (log(St) + factor(Re) + factor(g(Fr))), data = trainData)
+    pred.lm4 <- predict(fit.lm4, testData)
+    mse_test4 <- mean((pred.lm4 - log(testData$R_moment_4))^2)
+    mses = list(mse_test1, mse_test2, mse_test3, mse_test4)
+    test_mses_noint <- append(test_mses_noint, mses)
+}
+
+set.seed(325)
+folds <- cut(seq(1,nrow(data_train)),breaks=5,labels=FALSE)
+
+test_mses <- list()
+
+for(i in 1:5){
+    testIndexes <- which(folds==i,arr.ind=TRUE)
+    testData <- data_train[testIndexes, ]
+    trainData <- data_train[-testIndexes, ]
+  
+    fit.lm1 <- lm(log(R_moment_1) ~ (log(St) + factor(Re) + factor(g(Fr)) + factor(Re)*factor(g(Fr))), data = trainData)
+    pred.lm1 <- predict(fit.lm1, testData)
+    mse_test1 <- mean((pred.lm1 - log(testData$R_moment_1))^2)
+    fit.lm2 <- lm(log(R_moment_2) ~ (log(St) + factor(Re) + factor(g(Fr)) + factor(Re)*factor(g(Fr))), data = trainData)
+    pred.lm2 <- predict(fit.lm2, testData)
+    mse_test2 <- mean((pred.lm2 - log(testData$R_moment_2))^2)
+    fit.lm3 <- lm(log(R_moment_3) ~ (log(St) + factor(Re) + factor(g(Fr)) + factor(Re)*factor(g(Fr))), data = trainData)
+    pred.lm3 <- predict(fit.lm3, testData)
+    mse_test3 <- mean((pred.lm3 - log(testData$R_moment_3))^2)
+    fit.lm4 <- lm(log(R_moment_4) ~ (log(St) + factor(Re) + factor(g(Fr)) + factor(Re)*factor(g(Fr))), data = trainData)
+    pred.lm4 <- predict(fit.lm4, testData)
+    mse_test4 <- mean((pred.lm4 - log(testData$R_moment_4))^2)
+    mses = list(mse_test1, mse_test2, mse_test3, mse_test4)
+    test_mses <- append(test_mses, mses)
+}
+```
+
+```{r echo=FALSE, fig.show="hold", out.width="50%"}
+df <- as.data.frame(do.call(rbind, test_mses_noint))  
+df$moment <- as.factor(c(1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4))
+df$fold <- c(1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5)
+ggplot(df, aes(x = fold, y = V1, color = moment, group = moment)) + 
+  geom_point() + 
+  geom_line() + 
+  labs(
+    x = "Fold number",
+    y = "Test MSE", 
+    title = "5-fold CV test MSE for model without interaction"
+  )
+
+df2 <- as.data.frame(do.call(rbind, test_mses))  
+df2$moment <- df$moment
+df2$fold <- df$fold
+ggplot(df2, aes(x = fold, y = V1, color = moment, group = moment)) + 
+  geom_point() + 
+  geom_line() + 
+  labs(
+    x = "Fold number",
+    y = "Test MSE", 
+    title = "5-fold CV test MSE for model with interaction"
+  )
+```
+Although the linear model with interaction between Re and Fr performs much better than the linear model without interaction, it does not perform nearly as well in predicting higher raw moments. We can see this in the plot above: in the fifth fold, the test MSE for the first raw moment was 0.052, but the test MSE for the fourth raw moment was 28.83. The drastic difference between the two shows us that fitting a linear model for all four raw moments may be too simple. 
+
+##### Polynomial Regression and Splines
+We also explore other linear models such as polynomial regression. Similarly we treat Fr and Re as categorical values and performed a log transformation on each raw moment as illustrated in the following function. In order to decide the optimal polynomial degree for each raw moment, we apply a simple validation approach to select the best among models with *D* different polynomial orders. However, after comparing the validation MSEs between those polynomial models and the above linear regression model with interactions, both training and testing accuracy are much smaller. 
   
   $$\begin{aligned} log(R_{moment_i}) =  \beta_{0} + \beta_{1...d}poly(St, d) + \beta_{d+1}Fr + \beta_{d+2}Re\end{aligned}$$
 
@@ -63,8 +178,567 @@ physically
   $$\begin{aligned} log(R_{moment_i}) =  \beta_{0} + \beta_{1...d}poly(St, d) + \beta_{d+1}Fr + \beta_{d+2}Re\end{aligned} + \beta_{*}Fr*Re$$ 
   
   After training and selecting the optimal polynomial degrees for each raw moment, the adjusted training R\^2 reaches 0.9983 at 1st raw moment, and 2nd raw moment at 0.9677, 3nd raw moment at 0.9585, 4th raw moment at 0.9572, respectively. Also, the optimal polynomial models' predictive performances are much better than the above linear model with interaction according to their testing MSEs for all moments.
+```{r include=FALSE}
+attach(data_train)
+set.seed(3)
+train_ind <- sample(x = nrow(data_train), size = 0.8 * nrow(data_train))
+test_ind_neg <- -train_ind
+training <- data_train[train_ind, ]
+testing <- data_train[test_ind_neg, ]
+```
 
-## Results
+```{r include=FALSE}
+fit.lm1 <- lm(log(R_moment_1) ~ (log(St) + factor(Re) + factor(g(Fr))), data = training)
+pred.lm1 <- predict(fit.lm1, testing)
+mse_test1 <- mean((pred.lm1 - log(testing$R_moment_1))^2)
+pr2m1_1=summary(fit.lm1)$adj.r.squared
+fit.lm2 <- lm(log(R_moment_2) ~ (log(St) + factor(Re) + factor(g(Fr))), data = training)
+pred.lm2 <- predict(fit.lm2, testing)
+mse_test2 <- mean((pred.lm2 - log(testing$R_moment_2))^2)
+pr2m2_1=summary(fit.lm2)$adj.r.squared
+fit.lm3 <- lm(log(R_moment_3) ~ (log(St) + factor(Re) + factor(g(Fr))), data = training)
+pred.lm3 <- predict(fit.lm3, testing)
+mse_test3 <- mean((pred.lm3 - log(testing$R_moment_3))^2)
+pr2m3_1=summary(fit.lm3)$adj.r.squared
+fit.lm4 <- lm(log(R_moment_4) ~ (log(St) + factor(Re) + factor(g(Fr))), data = training)
+pred.lm4 <- predict(fit.lm4, testing)
+mse_test4 <- mean((pred.lm4 - log(testing$R_moment_4))^2)
+pr2m4_1=summary(fit.lm4)$adj.r.squared
+```
+
+```{r include=FALSE}
+polym1 <- lm(log(R_moment_1) ~ poly(log(St), 2) + factor(Re) + factor(g(Fr)), data = training)
+poly2m1 <- lm(log(R_moment_1) ~ poly(log(St), 3) + factor(Re) + factor(g(Fr)), data = training)
+poly3m1 <- lm(log(R_moment_1) ~ poly(log(St), 4) + factor(Re) + factor(g(Fr)), data = training)
+poly4m1 <- lm(log(R_moment_1) ~ poly(log(St), 5) + factor(Re) + factor(g(Fr)), data = training)
+poly5m1 <- lm(log(R_moment_1) ~ poly(log(St), 6) + factor(Re) + factor(g(Fr)), data = training)
+poly6m1 <- lm(log(R_moment_1) ~ poly(log(St), 7) + factor(Re) + factor(g(Fr)), data = training)
+poly7m1 <- lm(log(R_moment_1) ~ poly(log(St), 8) + factor(Re) + factor(g(Fr)), data = training)
+anova(fit.lm1, polym1, poly2m1, poly3m1, poly4m1, poly5m1, poly6m1, poly7m1)
+pred.polym1 <- predict(polym1, testing)
+pred.poly2m1 <- predict(poly2m1, testing)
+pred.poly3m1 <- predict(poly3m1, testing)
+pred.poly4m1 <- predict(poly4m1, testing)
+pred.poly5m1 <- predict(poly5m1, testing)
+pred.poly6m1 <- predict(poly6m1, testing)
+pred.poly7m1 <- predict(poly7m1, testing)
+mse_polym1 <- mean((pred.polym1 - log(testing$R_moment_1))^2)
+mse_poly2m1 <- mean((pred.poly2m1 - log(testing$R_moment_1))^2)
+mse_poly3m1 <- mean((pred.poly3m1 - log(testing$R_moment_1))^2)
+mse_poly4m1 <- mean((pred.poly4m1 - log(testing$R_moment_1))^2)
+mse_poly5m1 <- mean((pred.poly5m1 - log(testing$R_moment_1))^2)
+mse_poly6m1 <- mean((pred.poly6m1 - log(testing$R_moment_1))^2)
+mse_poly7m1 <- mean((pred.poly7m1 - log(testing$R_moment_1))^2)
+pr2m1_2=summary(polym1)$adj.r.squared
+pr2m1_3=summary(poly2m1)$adj.r.squared
+pr2m1_4=summary(poly3m1)$adj.r.squared
+pr2m1_5=summary(poly4m1)$adj.r.squared
+pr2m1_6=summary(poly5m1)$adj.r.squared
+pr2m1_7=summary(poly6m1)$adj.r.squared
+pr2m1_8=summary(poly7m1)$adj.r.squared
+```
+
+```{r include=FALSE}
+polym2 <- lm(log(R_moment_2) ~ poly(log(St), 2) + factor(Re) + factor(g(Fr)), data = training)
+poly2m2 <- lm(log(R_moment_2) ~ poly(log(St), 3) + factor(Re) + factor(g(Fr)), data = training)
+poly3m2 <- lm(log(R_moment_2) ~ poly(log(St), 4) + factor(Re) + factor(g(Fr)), data = training)
+poly4m2 <- lm(log(R_moment_2) ~ poly(log(St), 5) + factor(Re) + factor(g(Fr)), data = training)
+poly5m2 <- lm(log(R_moment_2) ~ poly(log(St), 6) + factor(Re) + factor(g(Fr)), data = training)
+poly6m2 <- lm(log(R_moment_2) ~ poly(log(St), 7) + factor(Re) + factor(g(Fr)), data = training)
+poly7m2 <- lm(log(R_moment_2) ~ poly(log(St), 8) + factor(Re) + factor(g(Fr)), data = training)
+anova(fit.lm2, polym2, poly2m2, poly3m2, poly4m2, poly5m2, poly6m2, poly7m2)
+pred.polym2 <- predict(polym2, testing)
+pred.poly2m2 <- predict(poly2m2, testing)
+pred.poly3m2 <- predict(poly3m2, testing)
+pred.poly4m2 <- predict(poly4m2, testing)
+pred.poly5m2 <- predict(poly5m2, testing)
+pred.poly6m2 <- predict(poly6m2, testing)
+pred.poly7m2 <- predict(poly7m2, testing)
+mse_polym2 <- mean((pred.polym2 - log(testing$R_moment_2))^2)
+mse_poly2m2 <- mean((pred.poly2m2 - log(testing$R_moment_2))^2)
+mse_poly3m2 <- mean((pred.poly3m2 - log(testing$R_moment_2))^2)
+mse_poly4m2 <- mean((pred.poly4m2 - log(testing$R_moment_2))^2)
+mse_poly5m2 <- mean((pred.poly5m2 - log(testing$R_moment_2))^2)
+mse_poly6m2 <- mean((pred.poly6m2 - log(testing$R_moment_2))^2)
+mse_poly7m2 <- mean((pred.poly7m2 - log(testing$R_moment_2))^2)
+pr2m2_2=summary(polym2)$adj.r.squared
+pr2m2_3=summary(poly2m2)$adj.r.squared
+pr2m2_4=summary(poly3m2)$adj.r.squared
+pr2m2_5=summary(poly4m2)$adj.r.squared
+pr2m2_6=summary(poly5m2)$adj.r.squared
+pr2m2_7=summary(poly6m2)$adj.r.squared
+pr2m2_8=summary(poly7m2)$adj.r.squared
+```
+
+```{r include=FALSE}
+polym3 <- lm(log(R_moment_3) ~ poly(log(St), 2) + factor(Re) + factor(g(Fr)), data = training)
+poly2m3 <- lm(log(R_moment_3) ~ poly(log(St), 3) + factor(Re) + factor(g(Fr)), data = training)
+poly3m3 <- lm(log(R_moment_3) ~ poly(log(St), 4) + factor(Re) + factor(g(Fr)), data = training)
+poly4m3 <- lm(log(R_moment_3) ~ poly(log(St), 5) + factor(Re) + factor(g(Fr)), data = training)
+poly5m3 <- lm(log(R_moment_3) ~ poly(log(St), 6) + factor(Re) + factor(g(Fr)), data = training)
+poly6m3 <- lm(log(R_moment_3) ~ poly(log(St), 7) + factor(Re) + factor(g(Fr)), data = training)
+poly7m3 <- lm(log(R_moment_3) ~ poly(log(St), 8) + factor(Re) + factor(g(Fr)), data = training)
+anova(fit.lm3, polym3, poly2m3, poly3m3, poly4m3, poly5m3, poly6m3, poly7m3)
+pred.polym3 <- predict(polym3, testing)
+pred.poly2m3 <- predict(poly2m3, testing)
+pred.poly3m3 <- predict(poly3m3, testing)
+pred.poly4m3 <- predict(poly4m3, testing)
+pred.poly5m3 <- predict(poly5m3, testing)
+pred.poly6m3 <- predict(poly6m3, testing)
+pred.poly7m3 <- predict(poly7m3, testing)
+mse_polym3 <- mean((pred.polym3 - log(testing$R_moment_3))^2)
+mse_poly2m3 <- mean((pred.poly2m3 - log(testing$R_moment_3))^2)
+mse_poly3m3 <- mean((pred.poly3m3 - log(testing$R_moment_3))^2)
+mse_poly4m3 <- mean((pred.poly4m3 - log(testing$R_moment_3))^2)
+mse_poly5m3 <- mean((pred.poly5m3 - log(testing$R_moment_3))^2)
+mse_poly6m3 <- mean((pred.poly6m3 - log(testing$R_moment_3))^2)
+mse_poly7m3 <- mean((pred.poly7m3 - log(testing$R_moment_3))^2)
+pr2m3_2=summary(polym3)$adj.r.squared
+pr2m3_3=summary(poly2m3)$adj.r.squared
+pr2m3_4=summary(poly3m3)$adj.r.squared
+pr2m3_5=summary(poly4m3)$adj.r.squared
+pr2m3_6=summary(poly5m3)$adj.r.squared
+pr2m3_7=summary(poly6m3)$adj.r.squared
+pr2m3_8=summary(poly7m3)$adj.r.squared
+```
+
+```{r include=FALSE}
+polym4 <- lm(log(R_moment_4) ~ poly(log(St), 2) + factor(Re) + factor(g(Fr)), data = training)
+poly2m4 <- lm(log(R_moment_4) ~ poly(log(St), 3) + factor(Re) + factor(g(Fr)), data = training)
+poly3m4 <- lm(log(R_moment_4) ~ poly(log(St), 4) + factor(Re) + factor(g(Fr)), data = training)
+poly4m4 <- lm(log(R_moment_4) ~ poly(log(St), 5) + factor(Re) + factor(g(Fr)), data = training)
+poly5m4 <- lm(log(R_moment_4) ~ poly(log(St), 6) + factor(Re) + factor(g(Fr)), data = training)
+poly6m4 <- lm(log(R_moment_4) ~ poly(log(St), 7) + factor(Re) + factor(g(Fr)), data = training)
+poly7m4 <- lm(log(R_moment_4) ~ poly(log(St), 8) + factor(Re) + factor(g(Fr)), data = training)
+anova(fit.lm4, polym4, poly2m4, poly3m4, poly4m4, poly5m4, poly6m4, poly7m4)
+pred.polym4 <- predict(polym4, testing)
+pred.poly2m4 <- predict(poly2m4, testing)
+pred.poly3m4 <- predict(poly3m4, testing)
+pred.poly4m4 <- predict(poly4m4, testing)
+pred.poly5m4 <- predict(poly5m4, testing)
+pred.poly6m4 <- predict(poly6m4, testing)
+pred.poly7m4 <- predict(poly7m4, testing)
+mse_polym4 <- mean((pred.polym4 - log(testing$R_moment_4))^2)
+mse_poly2m4 <- mean((pred.poly2m4 - log(testing$R_moment_4))^2)
+mse_poly3m4 <- mean((pred.poly3m4 - log(testing$R_moment_4))^2)
+mse_poly4m4 <- mean((pred.poly4m4 - log(testing$R_moment_4))^2)
+mse_poly5m4 <- mean((pred.poly5m4 - log(testing$R_moment_4))^2)
+mse_poly6m4 <- mean((pred.poly6m4 - log(testing$R_moment_4))^2)
+mse_poly7m4 <- mean((pred.poly7m4 - log(testing$R_moment_4))^2)
+pr2m4_2=summary(polym4)$adj.r.squared
+pr2m4_3=summary(poly2m4)$adj.r.squared
+pr2m4_4=summary(poly3m4)$adj.r.squared
+pr2m4_5=summary(poly4m4)$adj.r.squared
+pr2m4_6=summary(poly5m4)$adj.r.squared
+pr2m4_7=summary(poly6m4)$adj.r.squared
+pr2m4_8=summary(poly7m4)$adj.r.squared
+```
+
+```{r echo=FALSE, fig.show="hold", out.width="50%"}
+poly_df1 <- data.frame(matrix(ncol = 4, nrow = 8))
+colnames(poly_df1) <- c('mse', 'r2', 'degree', 'moment')
+poly_df1$mse <- c(mse_test1, mse_polym1, mse_poly2m1, mse_poly3m1, mse_poly4m1, mse_poly5m1, mse_poly6m1, mse_poly7m1)
+poly_df1$r2 <- c(pr2m1_1, pr2m1_2, pr2m1_3, pr2m1_4, pr2m1_5, pr2m1_6, pr2m1_7, pr2m1_8)
+poly_df1$degree <- c(1, 2, 3, 4, 5, 6, 7, 8)
+poly_df1$moment <- c(1, 1, 1, 1, 1, 1, 1, 1)
+
+poly_df2 <- data.frame(matrix(ncol = 4, nrow = 8))
+colnames(poly_df2) <- c('mse', 'r2', 'degree', 'moment')
+poly_df2$mse <- c(mse_test2, mse_polym2, mse_poly2m2, mse_poly3m2, mse_poly4m2, mse_poly5m2, mse_poly6m2, mse_poly7m2)
+poly_df2$r2 <- c(pr2m2_1, pr2m2_2, pr2m2_3, pr2m2_4, pr2m2_5, pr2m2_6, pr2m2_7, pr2m2_8)
+poly_df2$degree <- c(1, 2, 3, 4, 5, 6, 7, 8)
+poly_df2$moment <- c(2, 2, 2, 2, 2, 2, 2, 2)
+
+poly_df3 <- data.frame(matrix(ncol = 4, nrow = 8))
+colnames(poly_df3) <- c('mse', 'r2', 'degree', 'moment')
+poly_df3$mse <- c(mse_test3, mse_polym3, mse_poly2m3, mse_poly3m3, mse_poly4m3, mse_poly5m3, mse_poly6m3, mse_poly7m3)
+poly_df3$r2 <- c(pr2m3_1, pr2m3_2, pr2m3_3, pr2m3_4, pr2m3_5, pr2m3_6, pr2m3_7, pr2m3_8)
+poly_df3$degree <- c(1, 2, 3, 4, 5, 6, 7, 8)
+poly_df3$moment <- c(3, 3, 3, 3, 3, 3, 3, 3)
+
+poly_df4 <- data.frame(matrix(ncol = 4, nrow = 8))
+colnames(poly_df4) <- c('mse', 'r2', 'degree', 'moment')
+poly_df4$mse <- c(mse_test4, mse_polym4, mse_poly2m4, mse_poly3m4, mse_poly4m4, mse_poly5m4, mse_poly6m4, mse_poly7m4)
+poly_df4$r2 <- c(pr2m4_1, pr2m4_2, pr2m4_3, pr2m4_4, pr2m4_5, pr2m4_6, pr2m4_7, pr2m4_8)
+poly_df4$degree <- c(1, 2, 3, 4, 5, 6, 7, 8)
+poly_df4$moment <- c(4, 4, 4, 4, 4, 4, 4, 4)
+
+poly_df <- rbind(poly_df1, poly_df2, poly_df3, poly_df4)
+
+ggplot(poly_df, aes(x = degree, y = mse, color = as.factor(moment), group = as.factor(moment))) + 
+  geom_point() + 
+  geom_line() + 
+  labs(
+    x = "Degree",
+    y = "Test MSE", 
+    title = "Test MSE for polynomial models"
+  )
+
+ggplot(poly_df, aes(x = degree, y = r2, color = as.factor(moment), group = as.factor(moment))) + 
+  geom_point() + 
+  geom_line() + 
+  labs(
+    x = "Degree",
+    y = "Adjusted R^2", 
+    title = "Adjusted R^2 for polynomial models"
+  )
+```
+
+ADD INTERPRETATION OF SPLINES 
+
+```{r include=FALSE}
+spline1 <- lm(log(R_moment_1) ~ bs(log(St)) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline1 <- predict(spline1, testing)
+mse_spline1 <- mean((pred.spline1 - log(testing$R_moment_1))^2)
+spline2 <- lm(log(R_moment_1) ~ bs(log(St), df=4) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline2 <- predict(spline2, testing)
+mse_spline2 <- mean((pred.spline2 - log(testing$R_moment_1))^2)
+spline3 <- lm(log(R_moment_1) ~ bs(log(St), df=5) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline3 <- predict(spline3, testing)
+mse_spline3 <- mean((pred.spline3 - log(testing$R_moment_1))^2)
+spline4 <- lm(log(R_moment_1) ~ bs(log(St), df=6) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline4 <- predict(spline4, testing)
+mse_spline4 <- mean((pred.spline4 - log(testing$R_moment_1))^2)
+spline5 <- lm(log(R_moment_1) ~ bs(log(St), df=7) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline5 <- predict(spline5, testing)
+mse_spline5 <- mean((pred.spline5 - log(testing$R_moment_1))^2)
+
+sr2m1_1=summary(spline1)$adj.r.squared
+sr2m1_2=summary(spline2)$adj.r.squared
+sr2m1_3=summary(spline3)$adj.r.squared
+sr2m1_4=summary(spline4)$adj.r.squared
+sr2m1_5=summary(spline5)$adj.r.squared
+```
+
+```{r include=FALSE}
+spline1m2 <- lm(log(R_moment_2) ~ bs(log(St)) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline1m2 <- predict(spline1m2, testing)
+mse_spline1m2 <- mean((pred.spline1m2 - log(testing$R_moment_2))^2)
+spline2m2 <- lm(log(R_moment_2) ~ bs(log(St), df=4) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline2m2 <- predict(spline2m2, testing)
+mse_spline2m2 <- mean((pred.spline2m2 - log(testing$R_moment_2))^2)
+spline3m2 <- lm(log(R_moment_2) ~ bs(log(St), df=5) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline3m2 <- predict(spline3m2, testing)
+mse_spline3m2 <- mean((pred.spline3m2 - log(testing$R_moment_2))^2)
+spline4m2 <- lm(log(R_moment_2) ~ bs(log(St), df=6) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline4m2 <- predict(spline4m2, testing)
+mse_spline4m2 <- mean((pred.spline4m2 - log(testing$R_moment_2))^2)
+spline5m2 <- lm(log(R_moment_2) ~ bs(log(St), df=7) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline5m2 <- predict(spline5m2, testing)
+mse_spline5m2 <- mean((pred.spline5m2 - log(testing$R_moment_2))^2)
+
+sr2m2_1=summary(spline1m2)$adj.r.squared
+sr2m2_2=summary(spline2m2)$adj.r.squared
+sr2m2_3=summary(spline3m2)$adj.r.squared
+sr2m2_4=summary(spline4m2)$adj.r.squared
+sr2m2_5=summary(spline5m2)$adj.r.squared
+```
+
+```{r include=FALSE}
+spline1m3 <- lm(log(R_moment_3) ~ bs(log(St)) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline1m3 <- predict(spline1m3, testing)
+mse_spline1m3 <- mean((pred.spline1m3 - log(testing$R_moment_3))^2)
+spline2m3 <- lm(log(R_moment_3) ~ bs(log(St), df=4) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline2m3 <- predict(spline2m3, testing)
+mse_spline2m3 <- mean((pred.spline2m3 - log(testing$R_moment_3))^2)
+spline3m3 <- lm(log(R_moment_3) ~ bs(log(St), df=5) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline3m3 <- predict(spline3m3, testing)
+mse_spline3m3 <- mean((pred.spline3m3 - log(testing$R_moment_3))^2)
+spline4m3 <- lm(log(R_moment_3) ~ bs(log(St), df=6) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline4m3 <- predict(spline4m3, testing)
+mse_spline4m3 <- mean((pred.spline4m3 - log(testing$R_moment_3))^2)
+spline5m3 <- lm(log(R_moment_3) ~ bs(log(St), df=7) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline5m3 <- predict(spline5m3, testing)
+mse_spline5m3 <- mean((pred.spline5m3 - log(testing$R_moment_3))^2)
+
+sr2m3_1=summary(spline1m3)$adj.r.squared
+sr2m3_2=summary(spline2m3)$adj.r.squared
+sr2m3_3=summary(spline3m3)$adj.r.squared
+sr2m3_4=summary(spline4m3)$adj.r.squared
+sr2m3_5=summary(spline5m3)$adj.r.squared
+```
+
+```{r include=FALSE}
+spline1m4 <- lm(log(R_moment_4) ~ bs(log(St)) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline1m4 <- predict(spline1m4, testing)
+mse_spline1m4 <- mean((pred.spline1m4 - log(testing$R_moment_4))^2)
+spline2m4 <- lm(log(R_moment_4) ~ bs(log(St), df=4) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline2m4 <- predict(spline2m4, testing)
+mse_spline2m4 <- mean((pred.spline2m4 - log(testing$R_moment_4))^2)
+spline3m4 <- lm(log(R_moment_4) ~ bs(log(St), df=5) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline3m4 <- predict(spline3m4, testing)
+mse_spline3m4 <- mean((pred.spline3m4 - log(testing$R_moment_4))^2)
+spline4m4 <- lm(log(R_moment_4) ~ bs(log(St), df=6) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline4m4 <- predict(spline4m4, testing)
+mse_spline4m4 <- mean((pred.spline4m4 - log(testing$R_moment_4))^2)
+spline5m4 <- lm(log(R_moment_4) ~ bs(log(St), df=7) + factor(Re) + factor(g(Fr)), data = training)
+pred.spline5m4 <- predict(spline5m4, testing)
+mse_spline5m4 <- mean((pred.spline5m4 - log(testing$R_moment_4))^2)
+
+sr2m4_1=summary(spline1m4)$adj.r.squared
+sr2m4_2=summary(spline2m4)$adj.r.squared
+sr2m4_3=summary(spline3m4)$adj.r.squared
+sr2m4_4=summary(spline4m4)$adj.r.squared
+sr2m4_5=summary(spline5m4)$adj.r.squared
+```
+
+```{r echo=FALSE, fig.show="hold", out.width="50%"}
+spline_df1 <- data.frame(matrix(ncol = 4, nrow = 5))
+colnames(spline_df1) <- c('mse', 'r2', 'df', 'moment')
+spline_df1$mse <- c(mse_spline1, mse_spline2, mse_spline3, mse_spline4, mse_spline5)
+spline_df1$r2 <- c(sr2m1_1, sr2m1_2, sr2m1_3, sr2m1_4, sr2m1_5)
+spline_df1$df <- c(3, 4, 5, 6, 7 )
+spline_df1$moment <- c(1, 1, 1, 1, 1)
+
+spline_df2 <- data.frame(matrix(ncol = 4, nrow = 5))
+colnames(spline_df2) <- c('mse', 'r2', 'df', 'moment')
+spline_df2$mse <- c(mse_spline1m2, mse_spline2m2, mse_spline3m2, mse_spline4m2, mse_spline5m2)
+spline_df2$r2 <- c(sr2m2_1, sr2m2_2, sr2m2_3, sr2m2_4, sr2m2_5)
+spline_df2$df <- c(3, 4, 5, 6, 7)
+spline_df2$moment <- c(2, 2, 2, 2, 2)
+
+spline_df3 <- data.frame(matrix(ncol = 4, nrow = 5))
+colnames(spline_df3) <- c('mse', 'r2', 'df', 'moment')
+spline_df3$mse <- c(mse_spline1m3, mse_spline2m3, mse_spline3m3, mse_spline4m3, mse_spline5m3)
+spline_df3$r2 <- c(sr2m3_1, sr2m3_2, sr2m3_3, sr2m3_4, sr2m3_5)
+spline_df3$df <- c(3, 4, 5, 6, 7)
+spline_df3$moment <- c(3, 3, 3, 3, 3)
+
+spline_df4 <- data.frame(matrix(ncol = 4, nrow = 5))
+colnames(spline_df4) <- c('mse', 'r2', 'df', 'moment')
+spline_df4$mse <- c(mse_spline1m4, mse_spline2m4, mse_spline3m4, mse_spline4m4, mse_spline5m4)
+spline_df4$r2 <- c(sr2m4_1, sr2m4_2, sr2m4_3, sr2m4_4, sr2m4_5)
+spline_df4$df <- c(3, 4, 5, 6, 7)
+spline_df4$moment <- c(4, 4, 4, 4, 4)
+
+spline_df <- rbind(spline_df1, spline_df2, spline_df3, spline_df4)
+
+ggplot(spline_df, aes(x = df, y = mse, color = as.factor(moment), group = as.factor(moment))) + 
+  geom_point() + 
+  geom_line() + 
+  labs(
+    x = "Degrees freedom",
+    y = "Test MSE", 
+    title = "Test MSE for spline models"
+  )
+
+ggplot(spline_df, aes(x = df, y = r2, color = as.factor(moment), group = as.factor(moment))) + 
+  geom_point() + 
+  geom_line() + 
+  labs(
+    x = "Degrees freedom",
+    y = "Adjusted R^2", 
+    title = "Adjusted R^2 for spline models"
+  )
+```
+
+
+- interpret interaction between Re and Fr physically 
+- Are the effects identified above similar over all central moments (i.e., over all
+response variables), or are there effects which differ between, say, the mean and
+the variance? Try to interpret the latter effects using the three parameters mean
+physically
+- central vs raw moments? 
+
+Since the performance of the cubic polynomial model still showed much room for improvement, we further explored splines with three degrees of freedom. (cubic splines?) We expected the splines to perform better compared to polynomial regression because instead of fitting a single polynomical function to the entire dataset, spline interpolation fits a piecewise continuous function composed of many polynomials to model the data set.
+
+```{r, include=FALSE}
+moments = list(data_train$R_moment_1, data_train$R_moment_2, data_train$R_moment_3, data_train$R_moment_4)
+```
+
+```{r, echo=FALSE, message = FALSE, warning = FALSE}
+spline1 <- lm(log(R_moment_1) ~ bs(log(St)) + bs(Re) + bs(g(Fr)), data = training)
+pred.spline1 <- predict(spline1, testing)
+mse_spline1 <- mean((pred.spline1 - log(testing$R_moment_1))^2)
+r1=summary(spline1)$adj.r.squared
+
+spline2 <- lm(log(R_moment_2) ~ bs(log(St)) + bs(Re) + bs(g(Fr)), data = training)
+pred.spline2 <- predict(spline2, testing)
+mse_spline2 <- mean((pred.spline2 - log(testing$R_moment_2))^2)
+r2=summary(spline2)$adj.r.squared
+
+spline3 <- lm(log(R_moment_3) ~ bs(log(St)) + bs(Re) + bs(g(Fr)), data = training)
+pred.spline3 <- predict(spline3, testing)
+mse_spline3 <- mean((pred.spline3 - log(testing$R_moment_3))^2)
+r3=summary(spline3)$adj.r.squared
+
+spline4 <- lm(log(R_moment_4) ~ bs(log(St)) + bs(Re) + bs(g(Fr)), data = training)
+pred.spline4 <- predict(spline4, testing)
+mse_spline4 <- mean((pred.spline4 - log(testing$R_moment_4))^2)
+r4=summary(spline4)$adj.r.squared
+
+# Don't include these plots if no room!
+p1 = ggplot(testing, aes(x = St, y = log(R_moment_1), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline1), size = 1) +
+  labs(title = "Spline Predictions - Moment 1")
+p2 = ggplot(testing, aes(x = St, y = log(R_moment_2), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline2), size = 1) +
+  labs(title = "Spline Predictions - Moment 2")
+p3 = ggplot(testing, aes(x = St, y = log(R_moment_3), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline3), size = 1) +
+  labs(title = "Spline Predictions - Moment 3")
+p4 = ggplot(testing, aes(x = St, y = log(R_moment_4), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline4), size = 1) +
+  labs(title = "Spline Predictions - Moment 4")
+spline.graphs = ggarrange(p1, p2, p3, p4, ncol=2, nrow=2)
+spline.graphs
+
+mse_spline = rbind(c(mse_spline1, mse_spline2, mse_spline3, mse_spline4), c(r1, r2, r3, r4))
+colnames(mse_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
+rownames(mse_spline) = c("MSE", "Ajd R^2")
+kable(mse_spline, digits=3)
+```
+
+```{r, echo=FALSE, message = FALSE, warning = FALSE}
+spline1 <- lm(log(R_moment_1) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
+pred.spline1 <- predict(spline1, testing)
+mse_spline1 <- mean((pred.spline1 - log(testing$R_moment_1))^2)
+r1=summary(spline1)$adj.r.squared
+
+spline2 <- lm(log(R_moment_2) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
+pred.spline2 <- predict(spline2, testing)
+mse_spline2 <- mean((pred.spline2 - log(testing$R_moment_2))^2)
+r2=summary(spline2)$adj.r.squared
+
+spline3 <- lm(log(R_moment_3) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
+pred.spline3 <- predict(spline3, testing)
+mse_spline3 <- mean((pred.spline3 - log(testing$R_moment_3))^2)
+r3=summary(spline3)$adj.r.squared
+
+spline4 <- lm(log(R_moment_4) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
+pred.spline4 <- predict(spline4, testing)
+mse_spline4 <- mean((pred.spline4 - log(testing$R_moment_4))^2)
+r4=summary(spline4)$adj.r.squared
+
+p1 = ggplot(testing, aes(x = St, y = log(R_moment_1), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline1), size = 1) +
+  labs(title = "Spline Predictions - Moment 1", subtitle = "Fr + Re interaction")
+p2 = ggplot(testing, aes(x = St, y = log(R_moment_2), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline2), size = 1) +
+  labs(title = "Spline Predictions - Moment 2", subtitle = "Fr + Re interaction")
+p3 = ggplot(testing, aes(x = St, y = log(R_moment_3), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline3), size = 1) +
+  labs(title = "Spline Predictions - Moment 3", subtitle = "Fr + Re interaction")
+p4 = ggplot(testing, aes(x = St, y = log(R_moment_4), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline4), size = 1) +
+  labs(title = "Spline Predictions - Moment 4", subtitle = "Fr + Re interaction")
+interaction.spline.graphs = ggarrange(p1, p2, p3, p4, ncol=2, nrow=2)
+interaction.spline.graphs
+
+mse_spline = rbind(c(mse_spline1, mse_spline2, mse_spline3, mse_spline4), c(r1, r2, r3, r4))
+colnames(mse_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
+rownames(mse_spline) = c("MSE", "Ajd R^2")
+kable(mse_spline, digits=3)
+```
+```{r include=FALSE}
+set.seed(325)
+
+#shuffle training data? 
+rows <- sample(nrow(data_train))
+data_train_shuffled <- data_train[rows, ]
+
+folds <- cut(seq(1,nrow(data_train_shuffled)),breaks=5,labels=FALSE)
+
+test_mses <- list()
+adj_rsquared <- list()
+
+for(i in 1:5){
+    testIndexes <- which(folds==i,arr.ind=TRUE)
+    testData <- data_train_shuffled[testIndexes, ]
+    trainData <- data_train_shuffled[-testIndexes, ]
+  
+    spline1 <- lm(log(R_moment_1) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = trainData)
+    pred.spline1 <- predict(spline1, testData)
+    mse_spline1 <- mean((pred.spline1 - log(testData$R_moment_1))^2)
+    r1=summary(spline1)$adj.r.squared
+    
+    spline2 <- lm(log(R_moment_2) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = trainData)
+    pred.spline2 <- predict(spline2, testData)
+    mse_spline2 <- mean((pred.spline2 - log(testData$R_moment_2))^2)
+    r2=summary(spline2)$adj.r.squared
+    
+    spline3 <- lm(log(R_moment_3) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = trainData)
+    pred.spline3 <- predict(spline3, testData)
+    mse_spline3 <- mean((pred.spline3 - log(testData$R_moment_3))^2)
+    r3=summary(spline3)$adj.r.squared
+    
+    spline4 <- lm(log(R_moment_4) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = trainData)
+    pred.spline4 <- predict(spline4, testData)
+    mse_spline4 <- mean((pred.spline4 - log(testData$R_moment_4))^2)
+    r4=summary(spline4)$adj.r.squared
+    
+    mses = list(mse_spline1, mse_spline2, mse_spline3, mse_spline4)
+    test_mses <- append(test_mses, mses)
+    
+    rsquared = list(r1, r2, r3, r4)
+    adj_rsquared <- append(adj_rsquared, rsquared)
+}
+```
+
+Cross Validation again
+```{r echo=FALSE, warning=FALSE}
+set.seed(123)
+
+train_control <- trainControl(method = "repeatedcv", number = 5)
+
+spline_cv1 <- train(log(R_moment_1) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = data_train,
+               trControl = train_control, method = "lm")
+spline_cv2 <- train(log(R_moment_2) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = data_train,
+               trControl = train_control, method = "lm")
+spline_cv3 <- train(log(R_moment_3) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = data_train,
+               trControl = train_control, method = "lm")
+spline_cv4 <- train(log(R_moment_4) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = data_train,
+               trControl = train_control, method = "lm")
+
+myvars <- c("RMSE", "Rsquared", "MAE")
+spline_cv1_results <- spline_cv1$results[myvars]
+spline_cv1_results$Moment <- "Moment 1"
+spline_cv2_results <- spline_cv2$results[myvars]
+spline_cv2_results$Moment <- "Moment 2"
+spline_cv3_results <- spline_cv4$results[myvars]
+spline_cv3_results$Moment <- "Moment 3"
+spline_cv4_results <- spline_cv1$results[myvars]
+spline_cv4_results$Moment <- "Moment 4"
+
+cv_results <- rbind(spline_cv1_results, spline_cv2_results, spline_cv3_results, spline_cv4_results)
+cv_results <- as.data.frame(t(cv_results[,-4]))
+colnames(cv_results) <- cv_results$Moment
+kable(cv_results, digits=3)
+```
+
+```{r echo=FALSE, fig.show="hold", out.width="50%"}
+df_mse <- as.data.frame(do.call(rbind, test_mses))  %>% rename("test_mse" = "V1")
+df_r2 <- as.data.frame(do.call(rbind, adj_rsquared)) %>% rename("adj_rsquared" = "V1")
+df <- cbind(df_mse, df_r2)
+df$moment <- as.factor(c(1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4))
+df$fold <- c(1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5)
+ggplot(df, aes(x = fold, y = test_mse, color = moment, group = moment)) +
+  geom_point() +
+  geom_line() +
+  labs(
+    x = "Fold number",
+    y = "Test MSE",
+    title = "5-fold CV test MSE for spline(df=3) with interaction"
+  )
+
+ggplot(df, aes(x = fold, y = adj_rsquared, color = moment, group = moment)) +
+  geom_point() +
+  geom_line() +
+  labs(
+    x = "Fold number",
+    y = "Test MSE",
+    title = "5-fold CV test MSE for spline(df=3) with interaction"
+  )
+```
+Note: try cross validation for spline with interaction? To assess whether it's overfitting? 
 
 - base linear model: St doesn't even seem to be a significant predictor in some of these models. Linear regression might not work super well here. 
 - interaction terms: Re and g(Fr) appear to be significant, but St doesn't have any significant interactions.
@@ -72,10 +746,72 @@ physically
 - splines without interaction: better performance than linear model, but still room for improvement
 - splines with interaction: Adding the interaction term to the splines makes the performance of this model superior to anything we've used previously (when considering numerical datapoints) based on Adj $R^2$ and MSE in test validation.
 
+Formatting here needs to be fixed 
+
+##### Prediction 
+```{r echo=FALSE}
+#Use previously unseen testing data 
+pred.spline1 <- predict(spline1, data_test)
+pred.spline2 <- predict(spline2, data_test)
+pred.spline3 <- predict(spline3, data_test)
+pred.spline4 <- predict(spline4, data_test)
+
+pred_df <- data.frame(matrix(ncol = 5, nrow = nrow(data_test)))
+colnames(pred_df) <- c('R_moment_1', 'R_moment_2', 'R_moment_3', 'R_moment_4')
+pred_df$R_moment_1 <- pred.spline1
+pred_df$R_moment_2 <- pred.spline2
+pred_df$R_moment_3 <- pred.spline3
+pred_df$R_moment_4 <- pred.spline4
+pred_df$t <- "test"
+pred_df <- pred_df %>% discard(~all(is.na(.) | . ==""))
+
+final_pred_df <- cbind(data_test, pred_df)
+final_pred_df$Fr <- g(final_pred_df$Fr)
+
+new_data_train <- data_train
+new_data_train$Fr <- g(new_data_train$Fr)
+new_data_train$R_moment_1 <- log(R_moment_1)
+new_data_train$R_moment_2 <- log(R_moment_2)
+new_data_train$R_moment_3 <- log(R_moment_3)
+new_data_train$R_moment_4 <- log(R_moment_4)
+new_data_train$t <- "train"
+
+final_df <- rbind(new_data_train, final_pred_df)
+
+#exploring how the predicted values on the previously unseen testing data fit in with the training data
+#robably don't include, at least not in this format
+st_p1 <- ggplot(final_df, aes(x = St, y = R_moment_1, color = t)) + 
+  geom_point()
+st_p2 <- ggplot(final_df, aes(x = St, y = R_moment_2, color = t)) + 
+  geom_point()
+st_p3 <- ggplot(final_df, aes(x = St, y = R_moment_3, color = t)) + 
+  geom_point()
+st_p4 <- ggplot(final_df, aes(x = St, y = R_moment_4, color = t)) + 
+  geom_point()
+ggarrange(st_p1, st_p2, st_p3, st_p4)
+
+re_p1 <- ggplot(final_df, aes(x = Re, y = R_moment_1, color = t)) + 
+  geom_point()
+re_p2 <- ggplot(final_df, aes(x = Re, y = R_moment_2, color = t)) + 
+  geom_point()
+re_p3 <- ggplot(final_df, aes(x = Re, y = R_moment_3, color = t)) + 
+  geom_point()
+re_p4 <- ggplot(final_df, aes(x = Re, y = R_moment_4, color = t)) + 
+  geom_point()
+ggarrange(re_p1, re_p2, re_p3, re_p4)
+
+fr_p1 <- ggplot(final_df, aes(x = Fr, y = R_moment_1, color = t)) +
+  geom_point()
+fr_p2 <- ggplot(final_df, aes(x = Fr, y = R_moment_2, color = t)) +
+  geom_point()
+fr_p3 <- ggplot(final_df, aes(x = Fr, y = R_moment_3, color = t)) +
+  geom_point()
+fr_p4 <- ggplot(final_df, aes(x = Fr, y = R_moment_4, color = t)) +
+  geom_point()
+ggarrange(fr_p1, fr_p2, fr_p3, fr_p4)
+```
+
+## Results
+
 
 ## Conclusion
-
-
-
-
-
