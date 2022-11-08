@@ -31,12 +31,7 @@ library(caret)
 
 # Introduction
 
-Understanding and predicting turbulence in fluid motion is incredibly important to a vast range of problems, such as air pollution, population dynamics, and weather. However, turbulence looks random, irregular, and unpredictable, making it difficult to understand. In order to achieve better insights into understanding and predicting particle clusters in turbulence, we will investigate the effects of three parameters representing properties of turbulent flow and particles on the first four raw moments of the probability distribution for particle cluster volumes. We will be exploring how fluid turbulence (quantified by Reynolds number or *Re*), gravitational acceleration (quantified by Froud number or *Fr*) and particles’ characteristics (for example size and density which is quantified by Stokes number or *St*) affect the spatial distribution and clustering of particles in an idealized turbulence.
-
-Thus, our goals are as follows: For a new parameter setting of (Re, Fr, St), predict its particle cluster volume distribution in terms of its four raw moments. Inference: Investigate and interpret how each parameter affects the probability distribution for particle cluster volumes.
-
-We created two models; one is a more simple model whose key purpose is for inference to interpret the effect of Re, Fr, and St on particle cluster volume distribution. The other model is more complex, which allows for greater predictive performance in predicting particle cluster volume distribution for a new parameter setting of (Re, Fr, St).
-
+Understanding and predicting turbulence in fluid motion is incredibly important to a vast range of problems, such as air pollution, population dynamics, and weather. However, turbulence looks random, irregular, unpredictable, making it difficult to understand. Thus, our goals are as follows: For a new parameter setting of (Re, Fr, St), predict its particle cluster volume distribution in terms of its four raw moments. Inference: Investigate and interpret how each parameter affects the probability distribution for particle cluster volumes.
 
 # Methodology
 
@@ -50,27 +45,29 @@ We created two models; one is a more simple model whose key purpose is for infer
     
   Our final models for each of the moments for inference is a cubic polynomical with interaction terms between Re and Fr for all moments, a second interaction term between Fr and St for the first moment only, and a second additional interaction term between Re and St for the last 3 moments: 
 $$\begin{aligned}
-log(R_{moment1})=-1.486 + 5.599(log(St)) + 2.294(log(St))^2 + 1.167(log(St))^3 \\
--3.824(Re_{224})-6.015(Re_{398})--0.442(Fr_{0.3})-0.429(Fr_{\infty}) \\
-+0.238(Re_{224}*Fr_{0.3}) +0.389(Re_{224}*Fr_{\infty})+0.504(Re_{398}*Fr_{\infty})
+log(C_{moment1})=-2.050 + 1.508(log(St)) +0.188(log(St))^2 +  0.475(log(St))^3 \\
+-3.822(Re_{224})-6.002(Re_{398})-0.231(Fr_{0.3})-0.270(Fr_{\infty}) + 0.109(Fr_{0.3}*log(St)) \\ 
++0.0670(Fr_{\infty}*log(St)) +0.260(Re_{224}*Fr_{0.3}) +0.381(Re_{224}*Fr_{\infty}) \\
++0.492(Re_{398}*Fr_{\infty})
 \end{aligned}$$
 
 $$\begin{aligned}
-log(C_{moment2})=6.005+9.517(log(St)) + 5.599(log(St))^2 + 3.907(log(St))^3 \\
--3.825(Re_{224})-6.005(Re_{398})-6.679(Fr_{0.3})-6.562(Fr_{\infty}) \\
-+4.612(Re_{224}*Fr_{0.3}) +4.629(Re_{224}*Fr_{\infty})+7.157(Re_{398}*Fr_{\infty})
+log(C_{moment2})=6.009 + 10.885(log(St)) -4.807(log(St))^2 + 3.849(log(St))^3 \\
+-7.551(Re_{224})-11.953(Re_{398})-6.714(Fr_{0.3})-6.535(Fr_{\infty}) -0.0445(Re_{224}*log(St)) \\ 
+-0.653(Re_{398}*log(St)) +4.659(Re_{224}*Fr_{0.3}) +4.587(Re_{224}*Fr_{\infty}) \\
++6.897(Re_{398}*Fr_{\infty})
 \end{aligned}$$
 
 $$\begin{aligned}
-log(C_{moment3})=14.567+14.025(log(St)) - 8.234(log(St))^2 + 6.315(log(St))^3 \\
--11.292(Re_{224})-17.490(Re_{398})-12.888(Fr_{0.3})-12.625(Fr_{\infty}) \\
-+8.726(Re_{224}*Fr_{0.3}) +8.632(Re_{224}*Fr_{\infty})+13.498(Re_{398}*Fr_{\infty})
+log(C_{moment3})=14.576+16.701(log(St)) -8.134(log(St))^2 +  6.224(log(St))^3 -11.394(Re_{224}) \\ -17.978(Re_{398})-12.957(Fr_{0.3})-12.570(Fr_{\infty}) -0.154(Re_{224}*log(St)) \\ 
+-1.114(Re_{398}*log(St)) +8.810(Re_{224}*Fr_{0.3}) +8.561(Re_{224}*Fr_{\infty}) \\
++13.063(Re_{398}*Fr_{\infty})
 \end{aligned}$$
 
 $$\begin{aligned}
-log(C_{moment4})=23.168+18.0035(log(St)) - 22.202(log(St))^2 + 8.469(log(St))^3 \\
--15.075(Re_{224})-23.325(Re_{398})-19.018(Fr_{0.3})-18.619(Fr_{\infty}) \\
-+12.755(Re_{224}*Fr_{0.3}) +12.576(Re_{224}*Fr_{\infty})+19.746(Re_{398}*Fr_{\infty})
+log(C_{moment4})=23.181+21.817(log(St))-11.083(log(St))^2+8.348(log(St))^3-15.241(Re_{224}) \\ 
+-23.993(Re_{398}) -19.117(Fr_{0.3})-18.542(Fr_{\infty}) -0.251(Re_{224}*log(St)) \\ 
+-1.510(Re_{398}*log(St))+ 12.871(Re_{224}*Fr_{0.3}) + 12.478(Re_{224}*Fr_{\infty}) \\ +19.159(Re_{398}*Fr_{\infty})
 \end{aligned}$$
 
   Our goal for inference was to build a model that was both accurate and interpretable. In testing different models, we found that the linear model, while easy to interpret, performed quite poorly. On the other hand, the spline performed quite well, and ever better than the cubic polynomial, but was difficult to interpret. We compared different degrees of polynomial regression models using the validation set approach, and found that for all four moments, the test MSE began to flatten at the third degree. While higher degree polynomial models performed slightly better, we choose degree three avoid the issue of overfitting. Plots of our model predictions on the test set show that the predicted curves fit well to the testing points. We also performed 5-fold cross validation, which showed fairly low RMSE values and high $R^2$ values, further increasing confidence in the model's performance. 
@@ -168,7 +165,6 @@ kable(cv_results_final, digits=3)%>%
   kable_styling(font_size=8)
 ```
 
-
   From these models, we can gain insights into how Re, Fr, and St affect the probability distributions for particle cluster volumes. We can see that a larger Reynolds number would lead to lower predictions for all four moments. This means that as the ratio of fluid momentum force to viscous shear force increases, the mean of the distribution would decrease, the variance would decrease, the distribution will skew more to the right, and the tail will be lighter. This is in line with our knowledge that higher Reynolds numbers correspond to greater turbulent behavior. Likewise, an increase in gravitational acceleration decreases all four moments. 
   
   Even though a higher Reynold’s number or gravitational acceleration alone have a negative effect on all four log expected moments, interaction effects with the two variables indicate that as both take on larger values at the same time, the coefficients take a positive effect, partially opposing the coefficient of the original negative effect. Thus, this may indicate that the proportion of Re and Fr together, with them either being both high or both low, mitigates the negative association on the log moment of a negative Re or a negative Fr on its own. While interaction effects are usually less interpretable, in this case it makes sense to keep them in the final model. This is because high speeds cause turbulent flow, so the effect of turbulence (Re) on the distribution is different depending on the gravitational acceleration.
@@ -185,12 +181,9 @@ kable(cv_results_final, digits=3)%>%
   
   Despite certain advantages in modeling Re and Fr as categorical variables, we recognize the need to extrapolate beyond the three levels of Re and Fr to model real life circumstances and enable a wider range of prediction. In order to predict values for new observations between and/or outside the ranges of values we have seen, we had to make a model that could both interpolate and extrapolate. Instead of using categorical values for our predictor variables Fr and Re, we used numerical values so that our model is more generalizable to accept numerical values between or outside the ranges of Fr and Re that were given in the training data. In order to make Fr a numerical variable, we needed to perform a transformation on it to make Fr take on finite values for modeling. To do this, we transformed Fr so that the new value is equal to $1 - 2^{-Fr}$, so that the new Fr takes on values between 0 and 1.
   
-  After exploring linear and polynomial models both with and without interaction terms, we were still not satisfied with the accuracy of these models. Since the performance of our simpler models still showed much room for improvement, we further explored a Generalized Additive Model (GAM) using cubic splines with an interaction between Fr and Re. We expected the splines to perform better compared to polynomial regression because instead of fitting a single polynomial function to the entire dataset, spline interpolation fits a piecewise continuous function composed of many polynomials to model the data set. Splines give a more flexible model when the true regression function changes rapidly in certain regions but not others, which is why we expected a GAM using splines to perform better than polynomial models.
+  After exploring linear and polynomial models both with and without interaction terms, we were still not satisfied with the accuracy of these models. Since the performance of our simpler models still showed much room for improvement, we further explored cubic splines with an interaction between Fr and Re. We expected the splines to perform better compared to polynomial regression because instead of fitting a single polynomial function to the entire dataset, spline interpolation fits a piecewise continuous function composed of many polynomials to model the data set. 
   
-  We did analysis on GAM models using cubic splines with and without interaction terms, and as we expected, the model including the interaction between Fr and Re outperformed the model with no interaction. We did an 80/20 training-test data split in which we trained the model on 80% of our data, and then validated it on the remaining 20% of unseen data to evaluate its predictive performance. In the graphs below of the model's predictions, we saw that the trained model was able to approximate the new data extremely well, even when the three predictors were far away from any of the observations the model was trained on. This gave us confidence in our model that it is able to predict new datapoints very well without being overfit, and so we selected this GAM model to continue with.
-  
-  To obtain our final model and analyze its predictive performance, we performed 5-fold cross validation on our GAM model using cubic splines with an interaction between Fr and Re, and obtained the final model output with the best parameters which were selected by cross validation. This GAM model outperformed any other model we created thus far, as it had extremely high $R^2$ values and it produced lower test MSEs for all four R moments as compared to any other models. As such, we conclude our search for and training of our predictive model, and move on to discuss the results we found from our final predictive GAM model. 
-  
+  We did analysis on cubic spline models with and without interaction terms, and as we expected, the model including the interaction between Fr and Re outperformed the model with no interaction. To analyze predictive performance of our spline model, we performed 5-fold cross validation and selected the final model output containing the best parameters selected by cross validation. The cubic spline with the interaction term for Re and Fr outperformed any other model we created thus far, as it had extremely high $R^2$ values and it produced lower test MSEs for all four R moments as compared to any other models. 
 
 ```{r, include=FALSE}
 moments = list(data_train$R_moment_1, data_train$R_moment_2, data_train$R_moment_3, data_train$R_moment_4)
@@ -208,6 +201,8 @@ pred.spline1 <- prediction$fit
 se.spline1 <- prediction$se.fit
 mse_spline1 <- mean((pred.spline1 - log(testing$R_moment_1))^2)
 r1=summary(spline1)$adj.r.squared
+
+spline1_original = spline1
 
 spline2 <- lm(log(R_moment_2) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
 prediction <- predict(spline2, testing, se.fit=TRUE)
