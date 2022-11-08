@@ -43,16 +43,16 @@ Understanding and predicting turbulence in fluid motion is incredibly important 
   
   A closer examination of the data revealed interesting interactive patterns among the independent and dependent variables. Specifically, St appears to assume a strong, non-linear relationship with each of the moments. This relationship between St and R moments appeared logarithmic, so we log-transformed St. Also, while treating the Fr variable as categorical, we observed that there is a linear and decreasing relationship between Fr (gravitational acceleration) and R moments. Lastly, there is also a linear and decreasing relationship between Re (Reynolds number) and R moments. We also explored multicollinearity through VIFs for each model, which were very low.
     
-  Our final models for each of the moments for inference is a cubic polynomical with interaction terms between Re and Fr: 
+  Our final models for each of the moments for inference is a cubic polynomical with interaction terms between Re and Fr for all moments, a second interaction term between Fr and St for the first moment only, and a second additional interaction term between Re and St for the last 3 moments: 
 $$\begin{aligned}
-log(R_{moment1})=-2.048+2.002(log(St)) + 0.161(log(St))^2 + 0.446(log(St))^3 \\
--3.824(Re_{224})-6.015(Re_{398})-0.286(Fr_{0.3})-0.317(Fr_{\infty}) \\
+log(R_{moment1})=-1.486 + 5.599(log(St)) + 2.294(log(St))^2 + 1.167(log(St))^3 \\
+-3.824(Re_{224})-6.015(Re_{398})--0.442(Fr_{0.3})-0.429(Fr_{\infty}) \\
 +0.238(Re_{224}*Fr_{0.3}) +0.389(Re_{224}*Fr_{\infty})+0.504(Re_{398}*Fr_{\infty})
 \end{aligned}$$
 
 $$\begin{aligned}
-log(C_{moment2})=6.005+9.517(log(St)) - 4.885(log(St))^2 + 3.907(log(St))^3 \\
--7.520(Re_{224})-11.673(Re_{398})-6.679(Fr_{0.3})-6.562(Fr_{\infty}) \\
+log(C_{moment2})=6.005+9.517(log(St)) + 5.599(log(St))^2 + 3.907(log(St))^3 \\
+-3.825(Re_{224})-6.005(Re_{398})-6.679(Fr_{0.3})-6.562(Fr_{\infty}) \\
 +4.612(Re_{224}*Fr_{0.3}) +4.629(Re_{224}*Fr_{\infty})+7.157(Re_{398}*Fr_{\infty})
 \end{aligned}$$
 
@@ -95,55 +95,55 @@ testing <- data_train[test_ind_neg, ]
 ```{r include=FALSE, warning=FALSE}
 poly.full <- lm(cbind(log(C_moment_1), log(C_moment_2), log(C_moment_3), log(C_moment_4)) ~  poly(log(St), 3) + factor(Re) + factor(Fr) + factor(Re)*factor(Fr), data=data_train)
 summary(poly.full)
+library(kableExtra)
 ```
 
-```{r echo=FALSE, warning=FALSE}
-# Splines (numeric predictors) (WITH interaction)
-poly3m1_inter <- lm(log(C_moment_1) ~ poly(St, 3) + factor(Re) + factor(Fr) + factor(Re)*factor(Fr), data = training)
+```{r echo=FALSE, warning=FALSE, out.width="70%", out.height="70%"}
+# splines (numeric predictors) (WITH interaction)
+poly3m1_inter <- lm(log(C_moment_1) ~ poly(St, 3) + factor(Re) + factor(Fr) + factor(Fr)*log(St) + factor(Re)*factor(Fr), data = training)
 pred.poly3m1_inter <- predict(poly3m1_inter, testing)
 
-poly3m2_inter <- lm(log(C_moment_2) ~ poly(St, 3) + factor(Re) + factor(Fr) + factor(Re)*factor(Fr), data = training)
+poly3m2_inter <- lm(log(C_moment_2) ~ poly(St, 3) + factor(Re) + factor(Fr) + factor(Re)*log(St) + factor(Re)*factor(Fr), data = training)
 pred.poly3m2_inter <- predict(poly3m2_inter, testing)
 
-poly3m3_inter <- lm(log(C_moment_3) ~ poly(St, 3) + factor(Re) + factor(Fr) + factor(Re)*factor(Fr), data = training)
+poly3m3_inter <- lm(log(C_moment_3) ~ poly(St, 3) + factor(Re) + factor(Fr) + factor(Re)*log(St)+ factor(Re)*factor(Fr), data = training)
 pred.poly3m3_inter <- predict(poly3m3_inter, testing)
 
-poly3m4_inter <- lm(log(C_moment_4) ~ poly(St, 3) + factor(Re) + factor(Fr) + factor(Re)*factor(Fr), data = training)
+poly3m4_inter <- lm(log(C_moment_4) ~ poly(St, 3) + factor(Re) + factor(Fr)+ factor(Re)*log(St)+ factor(Re)*factor(Fr), data = training)
 pred.poly3m4_inter <- predict(poly3m4_inter, testing)
 
 p1 = ggplot(testing, aes(x = St, y = log(C_moment_1), color = factor(Re))) +
   geom_point() +
   geom_line(aes(x = St, y = pred.poly3m1_inter), size = 1) +
-  labs(title = "Polynomial Predictions - Moment 1", subtitle = "Fr + Re interaction")
+  labs(title = "Polynomial Predictions - Moment 1", subtitle = "Fr*Re + Fr*St interaction")
 p2 = ggplot(testing, aes(x = St, y = log(C_moment_2), color = factor(Re))) +
   geom_point() +
   geom_line(aes(x = St, y = pred.poly3m2_inter), size = 1) +
-  labs(title = "Polynomial Predictions - Moment 2", subtitle = "Fr + Re interaction")
+  labs(title = "Polynomial Predictions - Moment 2", subtitle = "Fr*Re + Re*St interaction")
 p3 = ggplot(testing, aes(x = St, y = log(C_moment_3), color = factor(Re))) +
   geom_point() +
   geom_line(aes(x = St, y = pred.poly3m3_inter), size = 1) +
-  labs(title = "Polynomial Predictions - Moment 3", subtitle = "Fr + Re interaction")
+  labs(title = "Polynomial Predictions - Moment 3", subtitle = "Fr*Re + Re*St interaction")
 p4 = ggplot(testing, aes(x = St, y = log(C_moment_4), color = factor(Re))) +
   geom_point() +
   geom_line(aes(x = St, y = pred.poly3m4_inter), size = 1) +
-  labs(title = "Polynomial Predictions - Moment 4", subtitle = "Fr + Re interaction")
+  labs(title = "Polynomial Predictions - Moment 4", subtitle = "Fr*Re + Re*St interaction")
 interaction.poly.graphs = ggarrange(p1, p2, p3, p4, ncol=2, nrow=2)
 interaction.poly.graphs
 ```
-
 
 ```{r echo=FALSE, warning=FALSE}
 set.seed(123)
 
 train_control_inf <- trainControl(method = "repeatedcv", number = 5)
 
-poly_cv1 <- train(log(C_moment_1) ~ poly(log(St), 3) + factor(Re) + factor(Fr) + factor(Re)*factor(Fr), data = data_train,
+poly_cv1 <- train(log(C_moment_1) ~ poly(log(St), 3) + factor(Re) + factor(Fr) + log(St)*factor(Fr) + factor(Re)*factor(Fr), data = data_train,
+             trControl = train_control_inf, method = "lm")
+poly_cv2 <- train(log(C_moment_2) ~ poly(log(St), 3) + factor(Re) + factor(Fr) + log(St)*factor(Re)+factor(Re)*factor(Fr), data = data_train,
                trControl = train_control_inf, method = "lm")
-poly_cv2 <- train(log(C_moment_2) ~ poly(log(St), 3) + factor(Re) + factor(Fr) + factor(Re)*factor(Fr), data = data_train,
+poly_cv3 <- train(log(C_moment_3) ~ poly(log(St), 3) + factor(Re) + factor(Fr) +log(St)*factor(Re)+ factor(Re)*factor(Fr), data = data_train,
                trControl = train_control_inf, method = "lm")
-poly_cv3 <- train(log(C_moment_3) ~ poly(log(St), 3) + factor(Re) + factor(Fr) + factor(Re)*factor(Fr), data = data_train,
-               trControl = train_control_inf, method = "lm")
-poly_cv4 <- train(log(C_moment_4) ~ poly(log(St), 3) + factor(Re) + factor(Fr) + factor(Re)*factor(Fr), data = data_train,
+poly_cv4 <- train(log(C_moment_4) ~ poly(log(St), 3) + factor(Re) + factor(Fr) + log(St)*factor(Re) + factor(Re)*factor(Fr), data = data_train,
                trControl = train_control_inf, method = "lm")
 
 myvars <- c("RMSE", "Rsquared", "MAE")
@@ -159,12 +159,20 @@ poly_cv4_results$Moment <- "Moment 4"
 cv_results <- rbind(poly_cv1_results, poly_cv2_results, poly_cv3_results, poly_cv4_results)
 cv_results_final <- as.data.frame(t(cv_results[,-4]))
 colnames(cv_results_final) <- cv_results$Moment
-kable(cv_results_final, digits=3)
+kable(cv_results_final, digits=3)%>%
+  kable_styling(font_size=8)
 ```
+
 
   From these models, we can gain insights into how Re, Fr, and St affect the probability distributions for particle cluster volumes. We can see that a larger Reynolds number would lead to lower predictions for all four moments. This means that as the ratio of fluid momentum force to viscous shear force increases, the mean of the distribution would decrease, the variance would decrease, the distribution will skew more to the right, and the tail will be lighter. This is in line with our knowledge that higher Reynolds numbers correspond to greater turbulent behavior. Likewise, an increase in gravitational acceleration decreases all four moments. 
   
   Even though a higher Reynold’s number or gravitational acceleration alone have a negative effect on all four log expected moments, interaction effects with the two variables indicate that as both take on larger values at the same time, the coefficients take a positive effect, partially opposing the coefficient of the original negative effect. Thus, this may indicate that the proportion of Re and Fr together, with them either being both high or both low, mitigates the negative association on the log moment of a negative Re or a negative Fr on its own. While interaction effects are usually less interpretable, in this case it makes sense to keep them in the final model. This is because high speeds cause turbulent flow, so the effect of turbulence (Re) on the distribution is different depending on the gravitational acceleration.
+  
+  Also, we noticed that the interaction term log(St):Re improved the models adjusted R-squared and RMSE values for moments 2, 3, and 4. The interaction term log(St):Re(398) was significant across the models for moments 2, 3, and 4. This interaction term has a negative association with variance, skew, and kurtosis. Thus, greater turbulent flow, Re, and larger log particle size, log(St), is associated with slightly lower variance, skew, and kurtosis.  
+  
+  The interaction term log(St):Re was insignificant at all levels in our model for raw moment 1. However, we noticed that the interaction term log(St):Fr improved the adjusted R-squared of the raw moment 1 model, and this term was significant across all levels of Fr with $\alpha=0.1$. For raw moment 1, the coefficient for log(St):Fr has a positive effect on the log of particle cluster size. Higher levels of Fr appear to decrease the magnitude of this effect, however, this is expected, since the coefficient for Fr has a negative association to log particle cluster size at each coefficient level. Thus, larger log of particle size, log(St), and lower gravitational acceleration levels, Fr, are associated with larger values of log mean particle cluster volume (first raw moment).
+  
+  (Note: no observations in the training set had both Re = 398 and Fr = 0.3, so that interaction term was not calculated by R)
 
 #### Prediction
   
@@ -184,7 +192,7 @@ g <- function(x) {
 }
 ```
 
-```{r, echo=FALSE, message = FALSE, warning = FALSE}
+```{r, echo=FALSE, message = FALSE, warning = FALSE, out.width="70%", out.height="70%"}
 # Splines (numeric predictors) (WITH interaction)
 spline1 <- lm(log(R_moment_1) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
 prediction <- predict(spline1, testing, se.fit=TRUE)
@@ -238,7 +246,8 @@ interaction.spline.graphs
 # Table of Standard Errors for Predictions
 se_spline = matrix(c(se.spline1, se.spline2, se.spline3, se.spline4),ncol=4)
 colnames(se_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
-kable(se_spline, digits=3)
+kable(se_spline, digits=3)%>%
+  kable_styling(font_size=8)
 
 # Table of MSE and Adj. R^2
 mse_spline = rbind(c(mse_spline1, mse_spline2, mse_spline3, mse_spline4), c(r1, r2, r3, r4))
@@ -275,7 +284,8 @@ mse_spline4=(spline_cv4$results["RMSE"][1,1])^2
 mse_spline = rbind(c(mse_spline1, mse_spline2, mse_spline3, mse_spline4), c(r1, r2, r3, r4))
 colnames(mse_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
 rownames(mse_spline) = c("MSE", "Ajd R^2")
-kable(mse_spline, digits=3)
+kable(mse_spline, digits=3)%>%
+  kable_styling(font_size=8)
 
 myvars <- c("RMSE", "Rsquared", "MAE")
 spline_cv1_results <- spline_cv1$results[myvars]
@@ -290,10 +300,11 @@ spline_cv4_results$Moment <- "Moment 4"
 cv_results <- rbind(spline_cv1_results, spline_cv2_results, spline_cv3_results, spline_cv4_results)
 cv_results <- as.data.frame(t(cv_results[,-4]))
 colnames(cv_results) <- cv_results$Moment
-kable(cv_results, digits=3)
+kable(cv_results, digits=3)%>%
+  kable_styling(font_size=8)
 ```
 
-##### Prediction 
+ 
 ```{r echo=FALSE, warning=FALSE}
 #Use previously unseen testing data
 pred.spline1 <- predict(spline_cv1, data_test)
@@ -365,7 +376,7 @@ pred_df$SE4 <- pred.spline4$se.fit
 pred_df <- cbind(data_test, pred_df)
 ```
 
-```{r echo=FALSE, warning=FALSE}
+```{r echo=FALSE, warning=FALSE, out.width="70%", out.height="70%"}
 st_p1 <- ggplot(pred_df, aes(x = St, y = R_moment_1)) + 
   geom_point() + 
   geom_errorbar(aes(ymin=R_moment_1-SE1, ymax=R_moment_1+SE1))
@@ -403,4 +414,12 @@ ggarrange(st_p1, st_p2, st_p3, st_p4)
 
 ## Conclusion
 
-  All three predictor variables display some significant statistical effect on particle clustering. In general, larger particle characteristics (i.e. size, density) lead to higher first moments. Higher fluid turbulence (Re) and gravitational acceleration lead to lower values of all four moments, but this is partially mitigated if they are both high as evidenced by the coefficients of the interaction effects, rather than one of these two values being individually high. Furthermore, in higher moments we see evidence of non-linearities between the variables.
+  In this study, we constructed four linear models with polynomial terms and interaction terms between Reynolds’ number, Froude’s number, and Stokes’ number to predict the first four centralized moments (related to mean, variance, skew, and kurtosis) of particle cluster distribution. Our models were able to explain a large percentage of variation in each of the four moments with reasonable mean squared prediction error for each model. 
+  
+  In general, all three predictor variables display some significant statistical effect on particle clustering. In general, larger particle characteristics (i.e. size, density) lead to higher first moments. Higher fluid turbulence (Re) and gravitational acceleration lead to lower values of all four moments, but this is partially mitigated if they are both high as evidenced by the coefficients of the interaction effects, rather than one of these two values being individually high. Furthermore, in higher moments we see evidence of non-linearities between the variables.
+  
+  To better understand the relative influence of turbulence, gravitational acceleration and particle characteristics on cluster formation, we examined the coefficients in our inference model. For raw moment 1 and central moments 2, 3, and 4, we see that interactions between Fr(0.3):Re(224), Fr(Inf):Re(398), and Fr(Inf):Re(224) are all positive, and increase at higher levels of Re and any level of Fr. Thus, higher Re levels and any Fr level yields an expected increase in log particle cluster volume size. For raw moment 1, this suggests that smoother flow at any level of gravitational acceleration may allow larger clusters to form, as they are not broken up by chaotic turbulence. For central moments 2, 3, and 4, this suggests that smoother flow with at any gravitational acceleration seemed to have a positive association with variance, skew, and kurtosis. Finally, the effects of particle size on each moment seems to significantly increase as our moment number increases. 
+  
+  Every coefficient across our 4 inference models are all statistically significant at the $\alpha = 0.01$ level with small standard errors, with the exception of the $poly(log(St), 3)^2$ coefficient, which has a p-value of 0.0658, in our inference model for the first raw moment.
+
+
