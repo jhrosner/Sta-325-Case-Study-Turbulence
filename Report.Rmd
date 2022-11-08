@@ -317,22 +317,27 @@ pred_result_df$R_moment_3 <- exp(pred_df$R_moment_3)
 pred_result_df$R_moment_4 <- exp(pred_df$R_moment_4)
 
 #write.csv(pred_result_df,"data-test-predictions.csv", row.names = FALSE)
+```
 
+## Results
+
+The figure below illustrates the final predictive results with standard errors on the hold-out testing dataset. As we mentioned in previous sections, the cubic spline model with an interaction between Re and Fr is the final prediction model that gave the best predictive results with the highest adjusted $R^2$ value and lowest MSE during validation set testing.
+
+To estimate the uncertainty levels, we analyze the prediction standard errors as we did in the training process. As we expect, the standard errors are relatively small for first/second moments and become larger for third/fourth moments. This means that the true regression functions are more complicate for higher order moments, and this is expected because higher moments measure more innate features of the volume distribution. So models with higher flexibility may perform better for higher order moments.
+
+```{r echo=FALSE, warning=FALSE, out.width="70%", out.height="70%"}
 pred_df$SE1 <- pred.spline1$se.fit
 pred_df$SE2 <- pred.spline2$se.fit
 pred_df$SE3 <- pred.spline3$se.fit
 pred_df$SE4 <- pred.spline4$se.fit
 
 # Table of Standard Errors for Predictions
-se_spline = matrix(c(pred.spline1$se.fit, pred.spline2$se.fit, pred.spline3$se.fit, pred.spline4$se.fit),ncol=4)
+se_spline = matrix(c(max(pred.spline1$se.fit), max(pred.spline2$se.fit), max(pred.spline3$se.fit), max(pred.spline4$se.fit)),ncol=4)
 colnames(se_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
-kable(se_spline, digits=3, caption = "Standard errors for validation set predictions")%>%
+kable(se_spline, digits=3, caption = "Maximum standard error for validation set predictions")%>%
   kable_styling(font_size=8, latex_options = "HOLD_position")
-```
 
-## Results
-
-```{r echo=FALSE, warning=FALSE, out.width="70%", out.height="70%"}
+# Plots with standard errors for prediction
 st_p1 <- ggplot(pred_df, aes(x = St, y = R_moment_1)) +
   geom_point() +
   geom_errorbar(aes(ymin=R_moment_1-SE1, ymax=R_moment_1+SE1), color="red")+ 
@@ -355,7 +360,7 @@ ggarrange(st_p1, st_p2, st_p3, st_p4)
 
 ## Conclusion
 
-  In this study, we constructed four linear models with polynomial terms and interaction terms between Reynolds’ number, Froude’s number, and Stokes’ number to predict the first four centralized moments (related to mean, variance, skew, and kurtosis) of particle cluster distribution. Our models were able to explain a large percentage of variation in each of the four moments with reasonable mean squared prediction error for each model. 
+  In this study, we constructed four models with polynomial terms and interaction terms between Reynolds’ number, Froude’s number, and Stokes’ number to predict the first four centralized moments (related to mean, variance, skew, and kurtosis) of particle cluster distribution. Our models were able to explain a large percentage of variation in each of the four moments with reasonable mean squared prediction error for each model. 
   
   In general, all three predictor variables display some significant statistical effect on particle clustering. In general, larger particle characteristics (i.e. size, density) lead to higher first moments. Higher fluid turbulence (Re) and gravitational acceleration lead to lower values of all four moments, but this is partially mitigated if they are both high as evidenced by the coefficients of the interaction effects, rather than one of these two values being individually high. Furthermore, in higher moments we see evidence of non-linearities between the variables.
   
