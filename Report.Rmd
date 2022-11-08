@@ -30,53 +30,49 @@ library(caret)
 library(kableExtra)
 ```
 
-# Introduction
+### Introduction
 
-Understanding and predicting turbulence in fluid motion is incredibly important to a vast range of problems, such as air pollution, population dynamics, and weather. However, turbulence looks random, irregular, and unpredictable, making it difficult to understand. In order to achieve better insights into understanding and predicting particle clusters in turbulence, we will investigate the effects of three parameters representing properties of turbulent flow and particles on the first four raw moments of the probability distribution for particle cluster volumes. We will be exploring how fluid turbulence (quantified by Reynolds number or *Re*), gravitational acceleration (quantified by Froud number or *Fr*) and particles’ characteristics (for example size and density which is quantified by Stokes number or *St*) affect the spatial distribution and clustering of particles in an idealized turbulence.
+Understanding and predicting turbulence in fluid motion is incredibly important to a vast range of problems, such as air pollution, population dynamics, and weather. However, turbulence looks random, irregular, and unpredictable, making it difficult to understand. In order to achieve better insights into understanding and predicting particle clusters in turbulence, we will investigate the effects of three parameters representing properties of turbulent flow and particles on the first four raw moments of the probability distribution for particle cluster volumes. We will be exploring how fluid turbulence (quantified by Reynolds number or *Re*), gravitational acceleration (quantified by Froude's number or *Fr*) and particles’ characteristics (for example size and density which is quantified by Stokes number or *St*) affect the spatial distribution and clustering of particles in an idealized turbulence.
 
 Thus, our goals are as follows: For a new parameter setting of (Re, Fr, St), predict its particle cluster volume distribution in terms of its four raw moments. Inference: Investigate and interpret how each parameter affects the probability distribution for particle cluster volumes.
 
 We created two models; one is a more simple model whose key purpose is for inference to interpret the effect of Re, Fr, and St on particle cluster volume distribution. The other model is more complex, which allows for greater predictive performance in predicting particle cluster volume distribution for a new parameter setting of (Re, Fr, St).
 
-# Methodology
+### Methodology
 
-#### Inference
+##### Inference
 
   Our univariate exploratory data analysis of (Re, Fr, St) and each moment revealed that the R moments are heavily right skewed, which poses a problem to linear regression. We applied log transformations on each moment to obtain more normally distributed variables. We did not change the first raw moment to the central moment, because the mean of the distribution conveys more meaningful information than the central moment, which is always zero. However, we converted the second, third, and fourth raw moments to central moments for inference so that our results are more interpretable. 
   
   In addition, despite their numerical natures, Fr and Re only contain three levels ($Fr \in \{0.052, 0.3, \infty\}$ and $Re \in \{90, 224, 398\}$). We decided to make them categorical variables for our inference model for 2 main reasons. Firstly, treating them as numeric variables puts our model at risk for extrapolation due to lack of data at many levels of Re and Fr, making our model unable to learn the trends around such regions; and secondly, we believe that these categories could carry real life significance. For instance, Fr = 0.3 is representative of cumulonimbus clouds and 0.052 is representative of cumulus clouds. Focusing on observations collected at such specific levels may lend unique insights into practical problems. 
   
-  A closer examination of the data revealed interesting interactive patterns among the independent and dependent variables. Specifically, St appears to assume a strong, non-linear relationship with each of the moments. This relationship between St and R moments appeared logarithmic, so we log-transformed St. Also, while treating the Fr variable as categorical, we observed that there is a linear and decreasing relationship between Fr (gravitational acceleration) and R moments. Lastly, there is also a linear and decreasing relationship between Re (Reynolds number) and R moments. We also explored multicollinearity through VIFs for each model, which were very low.
-    
-  Our final models for each of the moments for inference is a cubic polynomical with interaction terms between Re and Fr for all moments, a second interaction term between Fr and St for the first moment only, and a second additional interaction term between Re and St for the last 3 moments: 
+  A closer examination of the data revealed interesting interactive patterns among the independent and dependent variables. Specifically, St appears to assume a strong, non-linear relationship with each of the moments, which appeared logarithmic, so we log-transformed St. Also, while treating Fr variable as categorical, we observed that there is a linear and decreasing relationship between gravitational acceleration and R moments. Lastly, there is a linear, decreasing relationship between Reynolds number and R moments. We also explored multicollinearity through VIFs for each model, which were very low.
+  
+  We created several cubic polynomial models with different combinations of interaction terms. We chose the cubic polynomial models with interaction terms that resulted in the lowest MSE and Adjusted R squared values. Our final models for each of the moments for inference is a cubic polynomical with interaction terms between Re and Fr for all moments, Fr and St for the first moment, and Re and St for the last 3 moments.
 $$\begin{aligned}
-log(C_{moment1})=-2.050 + 1.508(log(St)) +0.188(log(St))^2 +  0.475(log(St))^3 \\
--3.822(Re_{224})-6.002(Re_{398})-0.231(Fr_{0.3})-0.270(Fr_{\infty}) + 0.109(Fr_{0.3}*log(St)) \\ 
-+0.0670(Fr_{\infty}*log(St)) +0.260(Re_{224}*Fr_{0.3}) +0.381(Re_{224}*Fr_{\infty}) \\
+log(C_{moment1})=-2.050 + 1.508(log(St)) +0.188(log(St))^2 +  0.475(log(St))^3
+-3.822(Re_{224})-6.002(Re_{398})-0.231(Fr_{0.3})-0.270(Fr_{\infty}) + 0.109(Fr_{0.3}*log(St)) 
++0.0670(Fr_{\infty}*log(St)) +0.260(Re_{224}*Fr_{0.3}) +0.381(Re_{224}*Fr_{\infty})
 +0.492(Re_{398}*Fr_{\infty})
 \end{aligned}$$
-
 $$\begin{aligned}
-log(C_{moment2})=6.009 + 10.885(log(St)) -4.807(log(St))^2 + 3.849(log(St))^3 \\
--7.551(Re_{224})-11.953(Re_{398})-6.714(Fr_{0.3})-6.535(Fr_{\infty}) -0.0445(Re_{224}*log(St)) \\ 
--0.653(Re_{398}*log(St)) +4.659(Re_{224}*Fr_{0.3}) +4.587(Re_{224}*Fr_{\infty}) \\
+log(C_{moment2})=6.009 + 10.885(log(St)) -4.807(log(St))^2 + 3.849(log(St))^3
+-7.551(Re_{224})-11.953(Re_{398})-6.714(Fr_{0.3})-6.535(Fr_{\infty}) -0.0445(Re_{224}*log(St))
+-0.653(Re_{398}*log(St)) +4.659(Re_{224}*Fr_{0.3}) +4.587(Re_{224}*Fr_{\infty})
 +6.897(Re_{398}*Fr_{\infty})
 \end{aligned}$$
-
 $$\begin{aligned}
-log(C_{moment3})=14.576+16.701(log(St)) -8.134(log(St))^2 +  6.224(log(St))^3 -11.394(Re_{224}) \\ -17.978(Re_{398})-12.957(Fr_{0.3})-12.570(Fr_{\infty}) -0.154(Re_{224}*log(St)) \\ 
--1.114(Re_{398}*log(St)) +8.810(Re_{224}*Fr_{0.3}) +8.561(Re_{224}*Fr_{\infty}) \\
+log(C_{moment3})=14.576+16.701(log(St)) -8.134(log(St))^2 +  6.224(log(St))^3 -11.394(Re_{224}) -17.978(Re_{398})-12.957(Fr_{0.3})-12.570(Fr_{\infty}) -0.154(Re_{224}*log(St)) 
+-1.114(Re_{398}*log(St)) +8.810(Re_{224}*Fr_{0.3}) +8.561(Re_{224}*Fr_{\infty})
 +13.063(Re_{398}*Fr_{\infty})
 \end{aligned}$$
-
 $$\begin{aligned}
-log(C_{moment4})=23.181+21.817(log(St))-11.083(log(St))^2+8.348(log(St))^3-15.241(Re_{224}) \\ 
--23.993(Re_{398}) -19.117(Fr_{0.3})-18.542(Fr_{\infty}) -0.251(Re_{224}*log(St)) \\ 
--1.510(Re_{398}*log(St))+ 12.871(Re_{224}*Fr_{0.3}) + 12.478(Re_{224}*Fr_{\infty}) \\ +19.159(Re_{398}*Fr_{\infty})
+log(C_{moment4})=23.181+21.817(log(St))-11.083(log(St))^2+8.348(log(St))^3-15.241(Re_{224})
+-23.993(Re_{398}) -19.117(Fr_{0.3})-18.542(Fr_{\infty}) -0.251(Re_{224}*log(St))
+-1.510(Re_{398}*log(St))+ 12.871(Re_{224}*Fr_{0.3}) + 12.478(Re_{224}*Fr_{\infty}) +19.159(Re_{398}*Fr_{\infty})
 \end{aligned}$$
 
   Our goal for inference was to build a model that was both accurate and interpretable. In testing different models, we found that the linear model, while easy to interpret, performed quite poorly. On the other hand, the spline performed quite well, and ever better than the cubic polynomial, but was difficult to interpret. We compared different degrees of polynomial regression models using the validation set approach, and found that for all four moments, the test MSE began to flatten at the third degree. While higher degree polynomial models performed slightly better, we choose degree three avoid the issue of overfitting. Plots of our model predictions on the test set show that the predicted curves fit well to the testing points. We also performed 5-fold cross validation, which showed fairly low RMSE values and high $R^2$ values, further increasing confidence in the model's performance. 
-
 ```{r include=FALSE}
 data_train <- read.csv("data-train.csv")
 data_test <- read.csv("data-test.csv")
@@ -89,7 +85,6 @@ data_train$C_moment_2 <- data_train$R_moment_2 - (data_train$R_moment_1)^2
 data_train$C_moment_3 <- data_train$R_moment_3 - 3 * (data_train$R_moment_1) * (data_train$R_moment_2) + 2 *(data_train$R_moment_1)^2
 data_train$C_moment_4 <- data_train$R_moment_4 - 4 * data_train$R_moment_1 * data_train$R_moment_3 + 6 * (data_train$R_moment_1)^2 * data_train$R_moment_2 - 3 * (data_train$R_moment_1)^4
 ```
-
 ```{r include=FALSE}
 attach(data_train)
 set.seed(3)
@@ -98,13 +93,11 @@ test_ind_neg <- -train_ind
 training <- data_train[train_ind, ]
 testing <- data_train[test_ind_neg, ]
 ```
-
 ```{r include=FALSE, warning=FALSE}
 poly.full <- lm(cbind(log(C_moment_1), log(C_moment_2), log(C_moment_3), log(C_moment_4)) ~  poly(log(St), 3) + factor(Re) + factor(Fr) + factor(Re)*factor(Fr), data=data_train)
 summary(poly.full)
 ```
-
-```{r echo=FALSE, warning=FALSE, out.width="70%", out.height="70%"}
+```{r echo=FALSE, warning=FALSE, include=FALSE, out.width="70%", out.height="70%"}
 # splines (numeric predictors) (WITH interaction)
 poly3m1_inter <- lm(log(C_moment_1) ~ poly(St, 3) + factor(Re) + factor(Fr) + factor(Fr)*log(St) + factor(Re)*factor(Fr), data = training)
 pred.poly3m1_inter <- predict(poly3m1_inter, testing)
@@ -137,7 +130,6 @@ p4 = ggplot(testing, aes(x = St, y = log(C_moment_4), color = factor(Re))) +
 interaction.poly.graphs = ggarrange(p1, p2, p3, p4, ncol=2, nrow=2)
 interaction.poly.graphs
 ```
-
 ```{r, echo=FALSE, warning=FALSE, out.width="70%", out.height="70%"}
 prediction.data <- expand_grid(St = seq(0, 3, by=0.01),
                                Fr = factor(c('0.052', '0.3', 'Inf'), 
@@ -165,8 +157,6 @@ p4 = ggplot(prediction.data, aes(x = St, y = preds4, color = factor(Re))) +
 interaction.polyModel.graphs = ggarrange(p1, p2, p3, p4, ncol=2, nrow=2)
 interaction.polyModel.graphs
 ```
-
-
 ```{r echo=FALSE, warning=FALSE}
 set.seed(123)
 
@@ -198,17 +188,8 @@ kable(cv_results_final, digits=3, caption = "Cubic polynomial 5-fold CV")%>%
   kable_styling(font_size=8, latex_options = "HOLD_position")
 ```
 
-  From these models, we can gain insights into how Re, Fr, and St affect the probability distributions for particle cluster volumes. We can see that a larger Reynolds number would lead to lower predictions for all four moments. This means that as the ratio of fluid momentum force to viscous shear force increases, the mean of the distribution would decrease, the variance would decrease, the distribution will skew more to the right, and the tail will be lighter. This is in line with our knowledge that higher Reynolds numbers correspond to greater turbulent behavior. Likewise, an increase in gravitational acceleration decreases all four moments. 
-  
-  Even though a higher Reynold’s number or gravitational acceleration alone have a negative effect on all four log expected moments, interaction effects with the two variables indicate that as both take on larger values at the same time, the coefficients take a positive effect, partially opposing the coefficient of the original negative effect. Thus, this may indicate that the proportion of Re and Fr together, with them either being both high or both low, mitigates the negative association on the log moment of a negative Re or a negative Fr on its own. While interaction effects are usually less interpretable, in this case it makes sense to keep them in the final model. This is because high speeds cause turbulent flow, so the effect of turbulence (Re) on the distribution is different depending on the gravitational acceleration.
-  
-  Also, we noticed that the interaction term log(St):Re improved the models adjusted R-squared and RMSE values for moments 2, 3, and 4. The interaction term log(St):Re(398) was significant across the models for moments 2, 3, and 4. This interaction term has a negative association with variance, skew, and kurtosis. Thus, greater turbulent flow, Re, and larger log particle size, log(St), is associated with slightly lower variance, skew, and kurtosis.  
-  
-  The interaction term log(St):Re was insignificant at all levels in our model for raw moment 1. However, we noticed that the interaction term log(St):Fr improved the adjusted R-squared of the raw moment 1 model, and this term was significant across all levels of Fr with $\alpha=0.1$. For raw moment 1, the coefficient for log(St):Fr has a positive effect on the log of particle cluster size. Higher levels of Fr appear to decrease the magnitude of this effect, however, this is expected, since the coefficient for Fr has a negative association to log particle cluster size at each coefficient level. Thus, larger log of particle size, log(St), and lower gravitational acceleration levels, Fr, are associated with larger values of log mean particle cluster volume (first raw moment).
-  
-  (Note: no observations in the training set had both Re = 398 and Fr = 0.3, so that interaction term was not calculated by R)
 
-#### Prediction
+##### Prediction
   
   One of our goals for this case study was to make a model that is specialized in making accurate predictions, meaning that we are not concerned with inference for this particular model. Because we are not concerned with interpreting this model, we explored more complex models because they tend to have better predictive performance than simple models.
   
@@ -219,8 +200,6 @@ kable(cv_results_final, digits=3, caption = "Cubic polynomial 5-fold CV")%>%
   We did analysis on GAM models using cubic splines with and without interaction terms, and as we expected, the model including the interaction between Fr and Re outperformed the model with no interaction. We did an 80/20 training-test data split in which we trained the model on 80% of our data, and then validated it on the remaining 20% of unseen data to evaluate its predictive performance. In the graphs below of the model's predictions, we saw that the trained model was able to approximate the new data extremely well, even when the three predictors were far away from any of the observations the model was trained on. This gave us confidence in our model that it is able to predict new datapoints very well without being overfit, and so we selected this GAM model to continue with.
   
   To analyze the predictive performance of our model, we performed 5-fold cross validation on our GAM model using cubic splines with an interaction between Fr and Re. After confirming using 5-fold cross-validation that our model outperformed any other model we created thus far, as it had extremely high $R^2$ values and it produced lower test MSEs for all four R moments as compared to any other models, we trained our final model. We obtained the final model by training the GAM on all of our training data found in data-train.csv. We conclude our search for and training of our predictive model, and move on to discuss the results we found from our final predictive GAM model. 
-  
-
 ```{r, include=FALSE}
 moments = list(data_train$R_moment_1, data_train$R_moment_2, data_train$R_moment_3, data_train$R_moment_4)
 
@@ -228,7 +207,6 @@ g <- function(x) {
   return (1 - 2^(-x))
 }
 ```
-
 ```{r, echo=FALSE, message = FALSE, warning = FALSE, out.width="70%", out.height="70%"}
 # Splines (numeric predictors) (WITH interaction)
 spline1 <- lm(log(R_moment_1) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
@@ -285,8 +263,6 @@ rownames(mse_spline) = c("MSE", "Ajd R^2")
 kable(mse_spline, digits=3, caption = "Spline validation set metrics")%>%
   kable_styling(font_size=8, latex_options = "HOLD_position")
 ```
-
-
 ```{r echo=FALSE, warning=FALSE}
 #Use previously unseen testing data
 set.seed(123)
@@ -318,8 +294,19 @@ pred_result_df$R_moment_4 <- exp(pred_df$R_moment_4)
 
 #write.csv(pred_result_df,"data-test-predictions.csv", row.names = FALSE)
 ```
+### Results
 
-## Results
+##### Inference Results
+
+  From our inference models, we can gain insights into how Re, Fr, and St affect the probability distributions for particle cluster volumes. We notice that a larger Reynolds number leads to lower predictions for all four moments. As the ratio of fluid momentum force to viscous shear force increases, the mean of the distribution would decrease, the variance would decrease, the distribution will skew more to the right, and the tail will be lighter. This is in line with our knowledge that higher Reynolds numbers correspond to greater turbulent behavior. Likewise, an increase in gravitational acceleration decreases all four moments. 
+  
+  Fr and Re alone both have a negative effect on all four log expected moments, but, the interaction effect of the two variables indicates that as they on larger values at the same time, the coefficients then take a positive effect instead, partially opposing the coefficient of the original negative effect. While interaction effects are usually less interpretable, in this case it makes sense to keep them in the final model. This is because high speeds cause turbulent flow, so the effect of turbulence (Re) on the distribution is different depending on the gravitational acceleration.For raw moment 1, this suggests that smoother flow at any level of gravitational acceleration may allow larger clusters to form, as they are not broken up by chaotic turbulence. For central moments 2, 3, and 4, this suggests that smoother flow with at any gravitational acceleration seemed to have a positive association with variance, skew, and kurtosis. Finally, the effects of particle size on each moment seems to significantly increase as our moment number increases.
+  
+  We also noticed that the interaction term log(St):Re improved the models Adjusted R-squared and RMSE values for moments 2, 3, and 4. The interaction term log(St):Re(398) was significant across the models for moments 2, 3, and 4. This interaction term has a negative association with variance, skew, and kurtosis. Thus, greater turbulent flow, Re, and larger log particle size, log(St), is associated with slightly lower variance, skew, and kurtosis. The interaction term log(St):Re was insignificant in our model for raw moment 1. However, the interaction term log(St):Fr improved the adjusted R-squared of the raw moment 1 model, and was significant across all levels of Fr with $\alpha=0.1$. For raw moment 1, larger log(St) values and Fr levels are associated with larger values of log mean particle cluster volume (first raw moment). 
+  
+  The coefficient $log(St)^2$ in our inference model for raw moment 1 was insignificant at the $\alpha=0.1$ level. This is a source of uncertainty in our model. Furthermore, Fr and Re were used as categorical variables in our models despite that they take on numeric values in practice. This approach limits the generlizability of our model, restricting its application to values within the categories. Lastly, no observations in the training set had both Re = 398 and Fr = 0.3, so that interaction term was not calculated by R. This could limit the application of our models at observations with those values.
+
+##### Prediction Results
 
 The figure below illustrates the final predictive results with standard errors on the hold-out testing dataset. As we mentioned in previous sections, the cubic spline model with an interaction between Re and Fr is the final prediction model that gave the best predictive results with the highest adjusted $R^2$ value and lowest MSE during validation set testing.
 
@@ -357,13 +344,6 @@ st_p4 <- ggplot(pred_df, aes(x = St, y = R_moment_4)) +
 ggarrange(st_p1, st_p2, st_p3, st_p4)
 ```
 
+### Conclusion
 
-## Conclusion
-
-  In this study, we constructed four models with polynomial terms and interaction terms between Reynolds’ number, Froude’s number, and Stokes’ number to predict the first four centralized moments (related to mean, variance, skew, and kurtosis) of particle cluster distribution. Our models were able to explain a large percentage of variation in each of the four moments with reasonable mean squared prediction error for each model. 
-  
-  In general, all three predictor variables display some significant statistical effect on particle clustering. In general, larger particle characteristics (i.e. size, density) lead to higher first moments. Higher fluid turbulence (Re) and gravitational acceleration lead to lower values of all four moments, but this is partially mitigated if they are both high as evidenced by the coefficients of the interaction effects, rather than one of these two values being individually high. Furthermore, in higher moments we see evidence of non-linearities between the variables.
-  
-  To better understand the relative influence of turbulence, gravitational acceleration and particle characteristics on cluster formation, we examined the coefficients in our inference model. For raw moment 1 and central moments 2, 3, and 4, we see that interactions between Fr(0.3):Re(224), Fr(Inf):Re(398), and Fr(Inf):Re(224) are all positive, and increase at higher levels of Re and any level of Fr. Thus, higher Re levels and any Fr level yields an expected increase in log particle cluster volume size. For raw moment 1, this suggests that smoother flow at any level of gravitational acceleration may allow larger clusters to form, as they are not broken up by chaotic turbulence. For central moments 2, 3, and 4, this suggests that smoother flow with at any gravitational acceleration seemed to have a positive association with variance, skew, and kurtosis. Finally, the effects of particle size on each moment seems to significantly increase as our moment number increases. 
-  
-  Every coefficient across our 4 inference models are all statistically significant at the $\alpha = 0.01$ level with small standard errors, with the exception of the $poly(log(St), 3)^2$ coefficient, which has a p-value of 0.0658, in our inference model for the first raw moment.
+  In this study, we constructed four models for inference and four models for prediction for the first raw moment and the second, third and fourth central moments (related to mean, variance, skew, and kurtosis) of particle cluster distribution. Our four inference models has polynomial terms and interaction terms between Reynolds’ number, Froude’s number, and Stokes’ number. For our prediction models we used splines constructed Our models were able to explain a large percentage of variation in each of the four moments with reasonable mean squared prediction error for each model. In general, all three predictor variables display some significant statistical effect on particle clustering. In general, larger particle characteristics (i.e. size, density) lead to higher first moments. Higher fluid turbulence (Re) and gravitational acceleration lead to lower values of all four moments, but this is partially mitigated if they are both high as evidenced by the coefficients of the interaction effects, rather than one of these two values being individually high. Lastly, St is associated with higher values for all four moments.
