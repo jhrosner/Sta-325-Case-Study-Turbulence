@@ -547,6 +547,7 @@ moments = list(data_train$R_moment_1, data_train$R_moment_2, data_train$R_moment
 ```
 
 ```{r, echo=FALSE, message = FALSE, warning = FALSE}
+# Splines (numeric predictors) (NO interaction)
 spline1 <- lm(log(R_moment_1) ~ bs(log(St)) + bs(Re) + bs(g(Fr)), data = training)
 pred.spline1 <- predict(spline1, testing)
 mse_spline1 <- mean((pred.spline1 - log(testing$R_moment_1))^2)
@@ -594,6 +595,7 @@ kable(mse_spline, digits=3)
 ```
 
 ```{r, echo=FALSE, message = FALSE, warning = FALSE}
+# Splines (numeric predictors) (WITH interaction)
 spline1 <- lm(log(R_moment_1) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
 pred.spline1 <- predict(spline1, testing)
 mse_spline1 <- mean((pred.spline1 - log(testing$R_moment_1))^2)
@@ -638,6 +640,7 @@ colnames(mse_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
 rownames(mse_spline) = c("MSE", "Ajd R^2")
 kable(mse_spline, digits=3)
 ```
+
 ```{r include=FALSE}
 set.seed(325)
 
@@ -734,8 +737,8 @@ ggplot(df, aes(x = fold, y = adj_rsquared, color = moment, group = moment)) +
   geom_line() +
   labs(
     x = "Fold number",
-    y = "Test MSE",
-    title = "5-fold CV test MSE for spline(df=3) with interaction"
+    y = "Adj R^2",
+    title = "5-fold CV Adj R^2 for spline(df=3) with interaction"
   )
 ```
 Note: try cross validation for spline with interaction? To assess whether it's overfitting? 
@@ -764,6 +767,16 @@ pred_df$R_moment_3 <- pred.spline3
 pred_df$R_moment_4 <- pred.spline4
 pred_df$t <- "test"
 pred_df <- pred_df %>% discard(~all(is.na(.) | . ==""))
+
+# make CSV to submit with prediction results
+pred_result_df <- cbind(data_test, pred_df)
+pred_result_df$R_moment_1 <- exp(pred_result_df$R_moment_1)
+pred_result_df$R_moment_2 <- exp(pred_result_df$R_moment_2)
+pred_result_df$R_moment_3 <- exp(pred_result_df$R_moment_3)
+pred_result_df$R_moment_4 <- exp(pred_result_df$R_moment_4)
+pred_result_df <- subset(pred_result_df, select=-t)
+write.csv(pred_result_df,"data-test-predictions.csv", row.names = TRUE)
+
 
 final_pred_df <- cbind(data_test, pred_df)
 final_pred_df$Fr <- g(final_pred_df$Fr)
