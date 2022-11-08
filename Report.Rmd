@@ -54,9 +54,15 @@ physically
   
 ##### Polynomial Regression
 
-  We also explore other linear models such as polynomial regression. Similarly we treat Fr and Re as categorical values and performed a log transformation on each raw moment as illustrated in the following function. In order to decide the optimal polynomial degree for each raw moment, we apply a simple validation approach to select the best among models with *D* different polynomial orders. However, after comparing the validation MSEs between those polynomial models and the above linear regression model with interactions, both training and testing accuracy are much smaller. $$\begin{aligned} log(R_{moment_i}) =  \beta_{0} + \beta_{1...d}poly(St, d) + \beta_{d+1}Fr + \beta_{d+2}Re\end{aligned}$$
+  We also explore other linear models such as polynomial regression. Similarly we treat Fr and Re as categorical values and performed a log transformation on each raw moment as illustrated in the following function. In order to decide the optimal polynomial degree for each raw moment, we apply a simple validation approach to select the best among models with *D* different polynomial orders. However, after comparing the validation MSEs between those polynomial models and the above linear regression model with interactions, both training and testing accuracy are much smaller. 
+  
+  $$\begin{aligned} log(R_{moment_i}) =  \beta_{0} + \beta_{1...d}poly(St, d) + \beta_{d+1}Fr + \beta_{d+2}Re\end{aligned}$$
 
-  We tried to tackle this by adding interaction terms to the initial polynomial model. And this significantly improved the regression model's performance both on training adjusted R\^2 and testing MSEs. The regression function is formulated as below: $$\begin{aligned} log(R_{moment_i}) =  \beta_{0} + \beta_{1...d}poly(St, d) + \beta_{d+1}Fr + \beta_{d+2}Re\end{aligned} + \beta_{*}Fr*Re$$ After training and selecting the optimal polynomial degrees for each raw moment, the adjusted training R\^2 reaches 0.9983 at 1st raw moment, and 2nd raw moment at 0.9677, 3nd raw moment at 0.9585, 4th raw moment at 0.9572, respectively. Also, the optimal polynomial models' predictive performances are much better than the above linear model with interaction according to their testing MSEs for all moments.
+  We tried to tackle this by adding interaction terms to the initial polynomial model. And this significantly improved the regression model's performance both on training adjusted R\^2 and testing MSEs. The regression function is formulated as below: 
+  
+  $$\begin{aligned} log(R_{moment_i}) =  \beta_{0} + \beta_{1...d}poly(St, d) + \beta_{d+1}Fr + \beta_{d+2}Re\end{aligned} + \beta_{*}Fr*Re$$ 
+  
+  After training and selecting the optimal polynomial degrees for each raw moment, the adjusted training R\^2 reaches 0.9983 at 1st raw moment, and 2nd raw moment at 0.9677, 3nd raw moment at 0.9585, 4th raw moment at 0.9572, respectively. Also, the optimal polynomial models' predictive performances are much better than the above linear model with interaction according to their testing MSEs for all moments.
 
 ## Results
 
