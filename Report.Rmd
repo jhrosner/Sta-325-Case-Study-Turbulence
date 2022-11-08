@@ -1,6 +1,6 @@
 ---
 title: 'Case Study: Turbulence'
-author: "Julia Rosner, Emily Mittleman, Tracy _, Ashley _"
+author: "Julia Rosner, Emily Mittleman, Yuzhe Gu, Ashley _"
 output:
   pdf_document: default
   html_document:
