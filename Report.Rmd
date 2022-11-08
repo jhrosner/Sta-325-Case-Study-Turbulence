@@ -166,17 +166,196 @@ From these models, we can gain insights into how Re, Fr, and St affect the proba
 #### Prediction
 
   Despite certain advantages in modeling Re and Fr as categorical variables, we recognize the need to extrapolate beyond the three levels of Re and Fr to model real life circumstances and enable a wider range of prediction. To address the limitations of our current models, we provide the following related models using splines that can be used for extrapolation.
-  In these models, Re is nuemric, and we transformed Fr to get rid of the infinity value that it takes on.
+  In these models, Re is numeric, and we transformed Fr to get rid of the infinity value that it takes on.
   
   One of our goals for this case study was to make a model that is specialized in making accurate predictions, meaning that we are not concerned with inference for this particular model. Because we are not concerned with interpreting this model, we explored more complex models because they tend to have better predictive performance than simple models.
 
 In order to predict values for new observations between and/or outside the ranges of values we have seen, we had to make a model that could both interpolate and extrapolate. Instead of using categorical values for our predictor variables Fr and Re, we used numerical values so that our model is more generalizable to accept numerical values between or outside the ranges of Fr and Re that were given in the training data. In order to make Fr a numerical variable, we needed to perform a transformation on it to make Fr take on only finite values for modeling. To do this, we transformed Fr so that the new value is equal to $1 - 2^{-Fr}$, so that the new Fr takes on values between 0 and 1.
 
 DISCUSS PREDICTION SPLINE MODEL W INTERACTIONS
-  
+
+```{r, include=FALSE, results='asis'}
+# perform transformation on Fr to get rid of infinity
+g <- function(x) {
+  return (1 - 2^(-x))
+}
+
+printModels <- function(models) {
+  for (i in 1:length(models)) {
+    print(paste0("R Moment ", i))
+    print(knitr::kable(tidy(models[[i]]),
+                       digits=3))
+    stats = matrix(c(summary(models[[i]])$adj.r.squared, summary(models[[i]])$sigma),
+                   ncol=2)
+    colnames(stats) = c("Adj R^2", "Std Err")
+    print(knitr::kable(stats, digits=3))
+    cat('\n\n<!-- -->\n\n')
+  }
+}
+```
+
+```{r, echo=FALSE, message = FALSE, warning = FALSE}
+# Splines (numeric predictors) (WITH interaction)
+spline1 <- lm(log(R_moment_1) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
+pred.spline1 <- predict(spline1, testing)
+mse_spline1 <- mean((pred.spline1 - log(testing$R_moment_1))^2)
+r1=summary(spline1)$adj.r.squared
+
+spline2 <- lm(log(R_moment_2) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
+pred.spline2 <- predict(spline2, testing)
+mse_spline2 <- mean((pred.spline2 - log(testing$R_moment_2))^2)
+r2=summary(spline2)$adj.r.squared
+
+spline3 <- lm(log(R_moment_3) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
+pred.spline3 <- predict(spline3, testing)
+mse_spline3 <- mean((pred.spline3 - log(testing$R_moment_3))^2)
+r3=summary(spline3)$adj.r.squared
+
+spline4 <- lm(log(R_moment_4) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
+pred.spline4 <- predict(spline4, testing)
+mse_spline4 <- mean((pred.spline4 - log(testing$R_moment_4))^2)
+r4=summary(spline4)$adj.r.squared
+
+p1 = ggplot(testing, aes(x = St, y = log(R_moment_1), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline1), size = 1) +
+  labs(title = "Spline Predictions - Moment 1", subtitle = "Fr + Re interaction")
+p2 = ggplot(testing, aes(x = St, y = log(R_moment_2), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline2), size = 1) +
+  labs(title = "Spline Predictions - Moment 2", subtitle = "Fr + Re interaction")
+p3 = ggplot(testing, aes(x = St, y = log(R_moment_3), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline3), size = 1) +
+  labs(title = "Spline Predictions - Moment 3", subtitle = "Fr + Re interaction")
+p4 = ggplot(testing, aes(x = St, y = log(R_moment_4), color = factor(Re))) +
+  geom_point() +
+  geom_line(aes(x = St, y = pred.spline4), size = 1) +
+  labs(title = "Spline Predictions - Moment 4", subtitle = "Fr + Re interaction")
+interaction.spline.graphs = ggarrange(p1, p2, p3, p4, ncol=2, nrow=2)
+interaction.spline.graphs
+```
+
+TALK BRIEFLY ABOUT CROSS VALIDATION
+```{r echo=FALSE, warning=FALSE}
+# Cross Validation
+set.seed(123)
+
+train_control <- trainControl(method = "repeatedcv", number = 5)
+
+spline_cv1 <- train(log(R_moment_1) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = data_train,
+               trControl = train_control, method = "lm")
+spline_cv2 <- train(log(R_moment_2) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = data_train,
+               trControl = train_control, method = "lm")
+spline_cv3 <- train(log(R_moment_3) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = data_train,
+               trControl = train_control, method = "lm")
+spline_cv4 <- train(log(R_moment_4) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = data_train,
+               trControl = train_control, method = "lm")
+
+myvars <- c("RMSE", "Rsquared", "MAE")
+spline_cv1_results <- spline_cv1$results[myvars]
+spline_cv1_results$Moment <- "Moment 1"
+spline_cv2_results <- spline_cv2$results[myvars]
+spline_cv2_results$Moment <- "Moment 2"
+spline_cv3_results <- spline_cv4$results[myvars]
+spline_cv3_results$Moment <- "Moment 3"
+spline_cv4_results <- spline_cv1$results[myvars]
+spline_cv4_results$Moment <- "Moment 4"
+
+cv_results <- rbind(spline_cv1_results, spline_cv2_results, spline_cv3_results, spline_cv4_results)
+cv_results_new <- as.data.frame(t(cv_results[,-4]))
+colnames(cv_results_new) <- cv_results$Moment
+kable(cv_results_new, digits=3)
+```
 
 
 ## Results
+```{r warning=FALSE, echo=FALSE}
+#Use previously unseen testing data 
+pred.spline1 <- predict(spline1, data_test, se=TRUE)
+pred.spline2 <- predict(spline2, data_test, se=TRUE)
+pred.spline3 <- predict(spline3, data_test, se=TRUE)
+pred.spline4 <- predict(spline4, data_test, se=TRUE)
 
+pred_df <- data.frame(matrix(ncol = 5, nrow = nrow(data_test)))
+colnames(pred_df) <- c('R_moment_1', 'R_moment_2', 'R_moment_3', 'R_moment_4')
+pred_df$R_moment_1 <- pred.spline1$fit
+pred_df$R_moment_2 <- pred.spline2$fit
+pred_df$R_moment_3 <- pred.spline3$fit
+pred_df$R_moment_4 <- pred.spline4$fit
+pred_df$t <- "test"
+pred_df <- pred_df %>% discard(~all(is.na(.) | . ==""))
+
+# make CSV to submit with prediction results
+pred_result_df <- cbind(data_test, pred_df)
+pred_result_df$R_moment_1 <- exp(pred_result_df$R_moment_1)
+pred_result_df$R_moment_2 <- exp(pred_result_df$R_moment_2)
+pred_result_df$R_moment_3 <- exp(pred_result_df$R_moment_3)
+pred_result_df$R_moment_4 <- exp(pred_result_df$R_moment_4)
+pred_result_df <- subset(pred_result_df, select=-t)
+# write.csv(pred_result_df,"data-test-predictions.csv", row.names = TRUE)
+
+final_pred_df <- cbind(data_test, pred_df)
+final_pred_df$Fr <- g(final_pred_df$Fr)
+
+new_data_train <- subset(data_train, select = c(-C_moment_1, -C_moment_2, -C_moment_3, -C_moment_4))
+new_data_train$Fr <- g(new_data_train$Fr)
+new_data_train$R_moment_1 <- log(R_moment_1)
+new_data_train$R_moment_2 <- log(R_moment_2)
+new_data_train$R_moment_3 <- log(R_moment_3)
+new_data_train$R_moment_4 <- log(R_moment_4)
+new_data_train$t <- "train"
+
+final_df <- rbind(new_data_train, final_pred_df)
+
+# pred_df$SE1 <- pred.spline1$se.fit
+# pred_df$SE2 <- pred.spline2$se.fit
+# pred_df$SE3 <- pred.spline3$se.fit
+# pred_df$SE4 <- pred.spline4$se.fit
+```
+```{r warning=FALSE, include=FALSE}
+pred_df$SE1 <- pred.spline1$se.fit
+pred_df$SE2 <- pred.spline2$se.fit
+pred_df$SE3 <- pred.spline3$se.fit
+pred_df$SE4 <- pred.spline4$se.fit
+pred_df <- cbind(data_test, pred_df)
+```
+
+```{r echo=FALSE, warning=FALSE}
+st_p1 <- ggplot(pred_df, aes(x = St, y = R_moment_1)) + 
+  geom_point() + 
+  geom_errorbar(aes(ymin=R_moment_1-SE1, ymax=R_moment_1+SE1))
+st_p2 <- ggplot(pred_df, aes(x = St, y = R_moment_2)) +
+  geom_point() +
+  geom_errorbar(aes(ymin=R_moment_2-SE2, ymax=R_moment_2+SE2))
+st_p3 <- ggplot(pred_df, aes(x = St, y = R_moment_3)) +
+  geom_point() +
+  geom_errorbar(aes(ymin=R_moment_3-SE3, ymax=R_moment_3+SE3))
+st_p4 <- ggplot(pred_df, aes(x = St, y = R_moment_4)) +
+  geom_point() +
+  geom_errorbar(aes(ymin=R_moment_4-SE4, ymax=R_moment_4+SE4))
+ggarrange(st_p1, st_p2, st_p3, st_p4)
+
+# re_p1 <- ggplot(final_df, aes(x = Re, y = R_moment_1, color = t)) + 
+#   geom_point()
+# re_p2 <- ggplot(final_df, aes(x = Re, y = R_moment_2, color = t)) + 
+#   geom_point()
+# re_p3 <- ggplot(final_df, aes(x = Re, y = R_moment_3, color = t)) + 
+#   geom_point()
+# re_p4 <- ggplot(final_df, aes(x = Re, y = R_moment_4, color = t)) + 
+#   geom_point()
+# ggarrange(re_p1, re_p2, re_p3, re_p4)
+# 
+# fr_p1 <- ggplot(final_df, aes(x = Fr, y = R_moment_1, color = t)) +
+#   geom_point()
+# fr_p2 <- ggplot(final_df, aes(x = Fr, y = R_moment_2, color = t)) +
+#   geom_point()
+# fr_p3 <- ggplot(final_df, aes(x = Fr, y = R_moment_3, color = t)) +
+#   geom_point()
+# fr_p4 <- ggplot(final_df, aes(x = Fr, y = R_moment_4, color = t)) +
+#   geom_point()
+# ggarrange(fr_p1, fr_p2, fr_p3, fr_p4)
+```
+```
 
 ## Conclusion
