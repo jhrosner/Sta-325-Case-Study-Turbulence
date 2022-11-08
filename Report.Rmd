@@ -41,7 +41,7 @@ Our univariate exploratory data analysis of (Re, Fr, St) and each moment reveale
   
 In addition, despite their numerical natures, Fr and Re only contain three levels ($Fr \in \{0.052, 0.3, \infty\}$ and $Re \in \{90, 224, 398\}$) in the training data. We decided to make them categorical variables for our inference model for 2 main reasons. Firstly, treating them as numeric variables puts our model at risk for extrapolation due to lack of data at many levels of Re and Fr, making our model unable to learn the trends around such regions; and secondly, we believe that these categories could carry real life significance. For instance, Fr = 0.3 is representative of cumulonimbus clouds and 0.052 is representative of cumulus clouds. Focusing on observations collected at such specific levels may lend unique insights into practical problems. 
   
-A closer examination of the data revealed interesting interactive patterns among the independent and dependent variables. Specifically, St appears to assume a strong, non-linear relationship with each of the moments. This relationship between St and R moments appeared logarithmic, so we log-transformed St. *are we going to deal with infinity?* Also, while treating the Fr variable as categorical, we observed that there is a linear and decreasing relationship between Fr (gravitational acceleration) and R moments. Lastly, there is also a linear and decreasing relationship between Re (Reynolds number) and R moments. We also explored multicollinearity through VIFs for each model, which were very low.
+A closer examination of the data revealed interesting interactive patterns among the independent and dependent variables. Specifically, St appears to assume a strong, non-linear relationship with each of the moments. This relationship between St and R moments appeared logarithmic, so we log-transformed St. Also, while treating the Fr variable as categorical, we observed that there is a linear and decreasing relationship between Fr (gravitational acceleration) and R moments. Lastly, there is also a linear and decreasing relationship between Re (Reynolds number) and R moments. We also explored multicollinearity through VIFs for each model, which were very low.
     
 Our final models for each of the moments for inference is a cubic polynomical with interaction terms between Re and Fr: 
 $$\begin{aligned}
@@ -63,7 +63,7 @@ log(C_{moment3})=14.567+14.025(log(St)) - 8.234(log(St))^2 + 6.315(log(St))^3 \\
 \end{aligned}$$
 
 $$\begin{aligned}
-log(R_{moment1})=23.168+18.0035(log(St)) - 22.202(log(St))^2 + 8.469(log(St))^3 \\
+log(C_{moment4})=23.168+18.0035(log(St)) - 22.202(log(St))^2 + 8.469(log(St))^3 \\
 -15.075(Re_{224})-23.325(Re_{398})-19.018(Fr_{0.3})-18.619(Fr_{\infty}) \\
 +12.755(Re_{224}*Fr_{0.3}) +12.576(Re_{224}*Fr_{\infty})+19.746(Re_{398}*Fr_{\infty})
 \end{aligned}$$
@@ -161,8 +161,7 @@ colnames(cv_results_final) <- cv_results$Moment
 kable(cv_results_final, digits=3)
 ```
 
-DISCUSS REAL-WORLD INTERPRETATION
-
+From these models, we can gain insights into how Re, Fr, and St affect the probability distributions for particle cluster volumes. We can see that a larger Reynolds number would lead to lower predictions for all four moments. This means that as the ratio of fluid momentum force to viscous shear force increases, the mean of the distribution would decrease, the variance would decrease, the distribution will skew more to the right, and the tail will be lighter. This is in line with our knowledge that higher Reynolds numbers correspond to greater turbulent behavior. Likewise, an increase in gravitational acceleration decreases all four moments. While interaction effects are usually less interpretable, in this case it makes sense to keep them in the final model. This is because high speeds cause turbulent flow, so the effect of turbulence (Re) on the distribution is different depending on the gravitational acceleration.
 
 #### Prediction
 
