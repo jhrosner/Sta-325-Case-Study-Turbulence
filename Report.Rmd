@@ -181,7 +181,7 @@ kable(cv_results_final, digits=3)
   
   We did analysis on GAM models using cubic splines with and without interaction terms, and as we expected, the model including the interaction between Fr and Re outperformed the model with no interaction. We did an 80/20 training-test data split in which we trained the model on 80% of our data, and then validated it on the remaining 20% of unseen data to evaluate its predictive performance. In the graphs below of the model's predictions, we saw that the trained model was able to approximate the new data extremely well, even when the three predictors were far away from any of the observations the model was trained on. This gave us confidence in our model that it is able to predict new datapoints very well without being overfit, and so we selected this GAM model to continue with.
   
-  To obtain our final model and analyze its predictive performance, we performed 5-fold cross validation on our GAM model using cubic splines with an interaction between Fr and Re, and obtained the final model output with the best parameters which were selected by cross validation. This GAM model outperformed any other model we created thus far, as it had extremely high $R^2$ values and it produced lower test MSEs for all four R moments as compared to any other models. As such, we conclude our search for and training of our predictive model, and move on to discuss the results we found from our final predictive GAM model. 
+  To analyze the predictive performance of our model, we performed 5-fold cross validation on our GAM model using cubic splines with an interaction between Fr and Re. After confirming using 5-fold cross-validation that our model outperformed any other model we created thus far, as it had extremely high $R^2$ values and it produced lower test MSEs for all four R moments as compared to any other models, we trained our final model. We obtained the final model by training the GAM on all of our training data found in data-train.csv. We conclude our search for and training of our predictive model, and move on to discuss the results we found from our final predictive GAM model. 
   
 
 ```{r, include=FALSE}
@@ -241,11 +241,6 @@ p4 = ggplot(testing, aes(x = St, y = log(R_moment_4), color = factor(Re))) +
 interaction.spline.graphs = ggarrange(p1, p2, p3, p4, ncol=2, nrow=2)
 interaction.spline.graphs
 
-# Table of Standard Errors for Predictions
-se_spline = matrix(c(se.spline1, se.spline2, se.spline3, se.spline4),ncol=4)
-colnames(se_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
-kable(se_spline, digits=3)
-
 # Table of MSE and Adj. R^2
 mse_spline = rbind(c(mse_spline1, mse_spline2, mse_spline3, mse_spline4), c(r1, r2, r3, r4))
 colnames(mse_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
@@ -253,159 +248,39 @@ rownames(mse_spline) = c("MSE", "Ajd R^2")
 #kable(mse_spline, digits=3)
 ```
 
-```{r echo=FALSE, warning=FALSE}
-# Cross Validation
-set.seed(123)
-
-train_control <- trainControl(method = "repeatedcv", number = 5)
-
-spline_cv1 <- train(log(R_moment_1) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = data_train,
-               trControl = train_control, method = "lm")
-spline_cv2 <- train(log(R_moment_2) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = data_train,
-               trControl = train_control, method = "lm")
-spline_cv3 <- train(log(R_moment_3) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = data_train,
-               trControl = train_control, method = "lm")
-spline_cv4 <- train(log(R_moment_4) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = data_train,
-               trControl = train_control, method = "lm")
-
-r1=summary(spline_cv1$finalModel)$adj.r.squared
-r2=summary(spline_cv2$finalModel)$adj.r.squared
-r3=summary(spline_cv3$finalModel)$adj.r.squared
-r4=summary(spline_cv4$finalModel)$adj.r.squared
-
-mse_spline1=(spline_cv1$results["RMSE"][1,1])^2
-mse_spline2=(spline_cv2$results["RMSE"][1,1])^2
-mse_spline3=(spline_cv3$results["RMSE"][1,1])^2
-mse_spline4=(spline_cv4$results["RMSE"][1,1])^2
-
-mse_spline = rbind(c(mse_spline1, mse_spline2, mse_spline3, mse_spline4), c(r1, r2, r3, r4))
-colnames(mse_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
-rownames(mse_spline) = c("MSE", "Ajd R^2")
-kable(mse_spline, digits=3)
-
-myvars <- c("RMSE", "Rsquared", "MAE")
-spline_cv1_results <- spline_cv1$results[myvars]
-spline_cv1_results$Moment <- "Moment 1"
-spline_cv2_results <- spline_cv2$results[myvars]
-spline_cv2_results$Moment <- "Moment 2"
-spline_cv3_results <- spline_cv4$results[myvars]
-spline_cv3_results$Moment <- "Moment 3"
-spline_cv4_results <- spline_cv1$results[myvars]
-spline_cv4_results$Moment <- "Moment 4"
-
-cv_results <- rbind(spline_cv1_results, spline_cv2_results, spline_cv3_results, spline_cv4_results)
-cv_results <- as.data.frame(t(cv_results[,-4]))
-colnames(cv_results) <- cv_results$Moment
-kable(cv_results, digits=3)
-```
-
 ##### Prediction 
 ```{r echo=FALSE, warning=FALSE}
 #Use previously unseen testing data
-pred.spline1 <- predict(spline_cv1, data_test)
-pred.spline2 <- predict(spline_cv2, data_test)
-pred.spline3 <- predict(spline_cv3, data_test)
-pred.spline4 <- predict(spline_cv4, data_test)
+set.seed(123)
+spline1 <- lm(log(R_moment_1) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
+spline2 <- lm(log(R_moment_2) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
+spline3 <- lm(log(R_moment_3) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
+spline4 <- lm(log(R_moment_4) ~ bs(log(St)) + bs(Re)*bs(g(Fr)), data = training)
 
-# make CSV to submit with prediction results
-pred_df <- data.frame(matrix(ncol = 4, nrow = nrow(data_test)))
-colnames(pred_df) <- c('R_moment_1', 'R_moment_2', 'R_moment_3', 'R_moment_4')
-pred_df$R_moment_1 <- exp(pred.spline1)
-pred_df$R_moment_2 <- exp(pred.spline2)
-pred_df$R_moment_3 <- exp(pred.spline3)
-pred_df$R_moment_4 <- exp(pred.spline4)
-pred_df <- pred_df %>% discard(~all(is.na(.) | . ==""))
-pred_result_df <- cbind(data_test, pred_df)
-write.csv(pred_result_df,"data-test-predictions.csv", row.names = TRUE)
-```
-
-## Results
-```{r warning=FALSE, echo=FALSE}
-#Use previously unseen testing data 
 pred.spline1 <- predict(spline1, data_test, se=TRUE)
 pred.spline2 <- predict(spline2, data_test, se=TRUE)
 pred.spline3 <- predict(spline3, data_test, se=TRUE)
 pred.spline4 <- predict(spline4, data_test, se=TRUE)
 
-pred_df <- data.frame(matrix(ncol = 5, nrow = nrow(data_test)))
-colnames(pred_df) <- c('R_moment_1', 'R_moment_2', 'R_moment_3', 'R_moment_4')
-pred_df$R_moment_1 <- pred.spline1$fit
-pred_df$R_moment_2 <- pred.spline2$fit
-pred_df$R_moment_3 <- pred.spline3$fit
-pred_df$R_moment_4 <- pred.spline4$fit
-pred_df$t <- "test"
-pred_df <- pred_df %>% discard(~all(is.na(.) | . ==""))
-
 # make CSV to submit with prediction results
+pred_df <- data.frame(matrix(ncol = 4, nrow = nrow(data_test)))
+colnames(pred_df) <- c('R_moment_1', 'R_moment_2', 'R_moment_3', 'R_moment_4')
+pred_df$R_moment_1 <- exp(pred.spline1$fit)
+pred_df$R_moment_2 <- exp(pred.spline2$fit)
+pred_df$R_moment_3 <- exp(pred.spline3$fit)
+pred_df$R_moment_4 <- exp(pred.spline4$fit)
+pred_df <- pred_df %>% discard(~all(is.na(.) | . ==""))
 pred_result_df <- cbind(data_test, pred_df)
-pred_result_df$R_moment_1 <- exp(pred_result_df$R_moment_1)
-pred_result_df$R_moment_2 <- exp(pred_result_df$R_moment_2)
-pred_result_df$R_moment_3 <- exp(pred_result_df$R_moment_3)
-pred_result_df$R_moment_4 <- exp(pred_result_df$R_moment_4)
-pred_result_df <- subset(pred_result_df, select=-t)
-# write.csv(pred_result_df,"data-test-predictions.csv", row.names = TRUE)
+write.csv(pred_result_df,"data-test-predictions.csv", row.names = FALSE)
 
-final_pred_df <- cbind(data_test, pred_df)
-final_pred_df$Fr <- g(final_pred_df$Fr)
-
-new_data_train <- subset(data_train, select = c(-C_moment_1, -C_moment_2, -C_moment_3, -C_moment_4))
-new_data_train$Fr <- g(new_data_train$Fr)
-new_data_train$R_moment_1 <- log(R_moment_1)
-new_data_train$R_moment_2 <- log(R_moment_2)
-new_data_train$R_moment_3 <- log(R_moment_3)
-new_data_train$R_moment_4 <- log(R_moment_4)
-new_data_train$t <- "train"
-
-final_df <- rbind(new_data_train, final_pred_df)
-
-# pred_df$SE1 <- pred.spline1$se.fit
-# pred_df$SE2 <- pred.spline2$se.fit
-# pred_df$SE3 <- pred.spline3$se.fit
-# pred_df$SE4 <- pred.spline4$se.fit
-```
-```{r warning=FALSE, include=FALSE}
-pred_df$SE1 <- pred.spline1$se.fit
-pred_df$SE2 <- pred.spline2$se.fit
-pred_df$SE3 <- pred.spline3$se.fit
-pred_df$SE4 <- pred.spline4$se.fit
-pred_df <- cbind(data_test, pred_df)
+# Table of Standard Errors for Predictions
+se_spline = matrix(c(pred.spline1$se.fit, pred.spline2$se.fit, pred.spline3$se.fit, pred.spline4$se.fit),ncol=4)
+colnames(se_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
+kable(se_spline, digits=3)
 ```
 
-```{r echo=FALSE, warning=FALSE}
-st_p1 <- ggplot(pred_df, aes(x = St, y = R_moment_1)) + 
-  geom_point() + 
-  geom_errorbar(aes(ymin=R_moment_1-SE1, ymax=R_moment_1+SE1))
-st_p2 <- ggplot(pred_df, aes(x = St, y = R_moment_2)) +
-  geom_point() +
-  geom_errorbar(aes(ymin=R_moment_2-SE2, ymax=R_moment_2+SE2))
-st_p3 <- ggplot(pred_df, aes(x = St, y = R_moment_3)) +
-  geom_point() +
-  geom_errorbar(aes(ymin=R_moment_3-SE3, ymax=R_moment_3+SE3))
-st_p4 <- ggplot(pred_df, aes(x = St, y = R_moment_4)) +
-  geom_point() +
-  geom_errorbar(aes(ymin=R_moment_4-SE4, ymax=R_moment_4+SE4))
-ggarrange(st_p1, st_p2, st_p3, st_p4)
+## Results
 
-# re_p1 <- ggplot(final_df, aes(x = Re, y = R_moment_1, color = t)) + 
-#   geom_point()
-# re_p2 <- ggplot(final_df, aes(x = Re, y = R_moment_2, color = t)) + 
-#   geom_point()
-# re_p3 <- ggplot(final_df, aes(x = Re, y = R_moment_3, color = t)) + 
-#   geom_point()
-# re_p4 <- ggplot(final_df, aes(x = Re, y = R_moment_4, color = t)) + 
-#   geom_point()
-# ggarrange(re_p1, re_p2, re_p3, re_p4)
-# 
-# fr_p1 <- ggplot(final_df, aes(x = Fr, y = R_moment_1, color = t)) +
-#   geom_point()
-# fr_p2 <- ggplot(final_df, aes(x = Fr, y = R_moment_2, color = t)) +
-#   geom_point()
-# fr_p3 <- ggplot(final_df, aes(x = Fr, y = R_moment_3, color = t)) +
-#   geom_point()
-# fr_p4 <- ggplot(final_df, aes(x = Fr, y = R_moment_4, color = t)) +
-#   geom_point()
-# ggarrange(fr_p1, fr_p2, fr_p3, fr_p4)
-```
 
 ## Conclusion
 
