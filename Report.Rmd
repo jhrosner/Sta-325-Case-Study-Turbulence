@@ -291,7 +291,8 @@ pred_df$SE4 <- pred.spline4$se.fit
 # Table of Standard Errors for Predictions
 se_spline = matrix(c(pred.spline1$se.fit, pred.spline2$se.fit, pred.spline3$se.fit, pred.spline4$se.fit),ncol=4)
 colnames(se_spline) = c("Moment 1", "Moment 2", "Moment 3", "Moment 4")
-kable(se_spline, digits=3)
+kable(se_spline, digits=3)%>%
+  kable_styling(font_size=8)
 ```
 
 ## Results
