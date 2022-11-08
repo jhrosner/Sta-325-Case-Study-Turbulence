@@ -31,7 +31,12 @@ library(caret)
 
 # Introduction
 
-Understanding and predicting turbulence in fluid motion is incredibly important to a vast range of problems, such as air pollution, population dynamics, and weather. However, turbulence looks random, irregular, unpredictable, making it difficult to understand. Thus, our goals are as follows: For a new parameter setting of (Re, Fr, St), predict its particle cluster volume distribution in terms of its four raw moments. Inference: Investigate and interpret how each parameter affects the probability distribution for particle cluster volumes.
+Understanding and predicting turbulence in fluid motion is incredibly important to a vast range of problems, such as air pollution, population dynamics, and weather. However, turbulence looks random, irregular, and unpredictable, making it difficult to understand. In order to achieve better insights into understanding and predicting particle clusters in turbulence, we will investigate the effects of three parameters representing properties of turbulent flow and particles on the first four raw moments of the probability distribution for particle cluster volumes. We will be exploring how fluid turbulence (quantified by Reynolds number or *Re*), gravitational acceleration (quantified by Froud number or *Fr*) and particles’ characteristics (for example size and density which is quantified by Stokes number or *St*) affect the spatial distribution and clustering of particles in an idealized turbulence.
+
+Thus, our goals are as follows: For a new parameter setting of (Re, Fr, St), predict its particle cluster volume distribution in terms of its four raw moments. Inference: Investigate and interpret how each parameter affects the probability distribution for particle cluster volumes.
+
+We created two models; one is a more simple model whose key purpose is for inference to interpret the effect of Re, Fr, and St on particle cluster volume distribution. The other model is more complex, which allows for greater predictive performance in predicting particle cluster volume distribution for a new parameter setting of (Re, Fr, St).
+
 
 # Methodology
 
