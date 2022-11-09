@@ -145,16 +145,16 @@ preds4 <- predict(poly3m4_inter, prediction.data)
 
 p1 = ggplot(prediction.data, aes(x = St, y = preds1, color = factor(Re))) +
   geom_point(size=0.5) +
-  labs(title = "Polynomial Model - Moment 1", subtitle = "Fr*Re Interaction")
+  labs(title = "Polynomial Model", subtitle = "Central Moment 1", y = "log(CentralMoment1)")
 p2 = ggplot(prediction.data, aes(x = St, y = preds2, color = factor(Re))) +
   geom_point(size=0.5) +
-  labs(title = "Polynomial Model - Moment 2", subtitle = "Fr*Re Interaction")
+  labs(title = "Polynomial Model", subtitle = "Central Moment 2", y = "log(CentralMoment2)")
 p3 = ggplot(prediction.data, aes(x = St, y = preds3, color = factor(Re))) +
   geom_point(size=0.5) +
-  labs(title = "Polynomial Model - Moment 3", subtitle = "Fr*Re Interaction")
+  labs(title = "Polynomial Model", subtitle = "Central Moment 3", y = "log(CentralMoment3)")
 p4 = ggplot(prediction.data, aes(x = St, y = preds4, color = factor(Re))) +
   geom_point(size=0.5) +
-  labs(title = "Polynomial Model - Moment 4", subtitle = "Fr*Re Interaction")
+  labs(title = "Polynomial Model", subtitle = "Central Moment 4", y = "log(CentralMoment4)")
 interaction.polyModel.graphs = ggarrange(p1, p2, p3, p4, ncol=2, nrow=2)
 #interaction.polyModel.graphs
 ```
